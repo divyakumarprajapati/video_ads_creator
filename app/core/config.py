@@ -74,14 +74,24 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     s3_public_url: str = "http://localhost:9000/video-ads"
 
-    # ── AI Models ──────────────────────────────────────────
+    # ── OpenAI (for ad-copy generation) ──────────────────────
+    openai_api_key: str = ""              # set to enable AI copywriting
+    openai_model: str = "gpt-5.1-chat-latest"
+    openai_max_tokens: int = 512
+    openai_temperature: float = 0.7
+    openai_base_url: str = ""             # leave empty for default api.openai.com
+
+    @property
+    def openai_enabled(self) -> bool:
+        return bool(self.openai_api_key)
+
+    # ── AI Models (vision / video – open source) ──────────
     models_dir: str = "/models"
     sdxl_model_path: str = "/models/stable-diffusion-xl-base-1.0"
     animatediff_model_path: str = "/models/animatediff-v3"
     svd_model_path: str = "/models/stable-video-diffusion"
     realesrgan_model_path: str = "/models/realesrgan"
     rembg_model_path: str = "/models/u2net"
-    llm_model_path: str = "/models/mistral-7b"
     comfyui_api_url: str = "http://localhost:8188"
 
     # ── Video Processing ──────────────────────────────────
