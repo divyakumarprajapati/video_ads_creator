@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     database_sync_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/video_ads"
     database_pool_size: int = 20
     database_max_overflow: int = 10
+    database_echo: bool = False  # log SQL statements (very noisy)
 
     # ── Feature Flags (local-first defaults) ───────────────
     use_celery: bool = False          # False = run workers in-process (thread)
