@@ -67,42 +67,60 @@ A production-grade **Multi-Product Video Ads Generation Engine** that turns prod
    └─────────────────────┘
 ```
 
-**Tech Stack**: Python 3.10+ · FastAPI · PostgreSQL · Redis · Celery · FFmpeg · SDXL · AnimateDiff · Docker
+**Tech Stack**: Python 3.10+ · FastAPI · PostgreSQL · FFmpeg · SDXL · AnimateDiff · Docker
+**Optional**: Redis · Celery (for distributed workers) · S3 (for cloud storage)
 
 ---
 
 ## Quick Start
 
-### Prerequisites
+### Option A: Local Mode (Postgres only -- recommended for getting started)
 
-- Docker & Docker Compose
-- (Optional) NVIDIA GPU + drivers for AI model acceleration
-
-### 1. Clone and configure
+The engine runs with **only PostgreSQL** as an external dependency. No Redis, no S3, no Celery needed. Videos are stored on the local filesystem and workers run in-process.
 
 ```bash
+# 1. Clone and configure
 git clone <this-repo>
 cd video-ads-engine
 cp .env.example .env
+
+# 2. Start Postgres (via Docker or use your own)
+docker compose -f docker-compose.local.yml up -d
+
+# 3. Install Python dependencies
+pip install -r requirements.txt
+
+# 4. Run database migrations
+alembic upgrade head
+
+# 5. Seed 108 video templates
+python scripts/seed_templates.py
+
+# 6. Start the API server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 2. Start services
+Generated videos are saved to `./output/` by default.
+
+### Option B: Full Stack (Docker Compose -- all services)
+
+For production-like setup with Redis, Celery workers, S3 (MinIO), and monitoring.
 
 ```bash
+# 1. Configure for full mode
+cp .env.example .env
+# Edit .env and set:
+#   USE_CELERY=true
+#   REDIS_ENABLED=true
+#   STORAGE_BACKEND=s3
+
+# 2. Start everything
 docker compose up -d
-```
 
-This starts: **PostgreSQL**, **Redis**, **MinIO** (S3), **API server**, **Celery worker**, **Flower** (monitoring UI).
-
-### 3. Run database migrations
-
-```bash
+# 3. Run migrations
 docker compose exec api alembic upgrade head
-```
 
-### 4. Seed 108 video templates
-
-```bash
+# 4. Seed templates
 docker compose exec api python scripts/seed_templates.py
 ```
 
@@ -397,16 +415,27 @@ All settings are environment variables. Copy `.env.example` to `.env` and custom
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| **Feature Flags** | | |
+| `USE_CELERY` | `false` | `true` = Celery workers (requires Redis) |
+| `REDIS_ENABLED` | `false` | `true` = Redis for rate-limit & progress |
+| `STORAGE_BACKEND` | `local` | `local` = filesystem, `s3` = S3-compatible |
+| **Core** | | |
 | `DATABASE_URL` | `postgresql+asyncpg://...` | Async DB connection |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis for caching |
-| `CELERY_BROKER_URL` | `redis://localhost:6379/1` | Celery broker |
-| `S3_ENDPOINT_URL` | `http://localhost:9000` | S3-compatible storage |
+| `DATABASE_SYNC_URL` | `postgresql+psycopg2://...` | Sync DB (for workers) |
 | `JWT_SECRET_KEY` | `change-me` | JWT signing secret |
+| **Local Storage** | | |
+| `LOCAL_STORAGE_ROOT` | `./output` | Where videos are saved locally |
+| `LOCAL_STORAGE_URL_PREFIX` | `http://localhost:8000/static` | URL prefix for downloads |
+| **Redis** (when enabled) | | |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection |
+| `CELERY_BROKER_URL` | `redis://localhost:6379/1` | Celery broker |
+| **S3** (when enabled) | | |
+| `S3_ENDPOINT_URL` | `http://localhost:9000` | S3-compatible endpoint |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `minioadmin` | S3 credentials |
+| **Other** | | |
 | `MAX_PRODUCTS_PER_CAMPAIGN` | `500` | Product limit |
-| `WORKER_CONCURRENCY` | `2` | Celery workers per node |
 | `GPU_DEVICES` | `0` | Comma-separated GPU IDs |
 | `SDXL_MODEL_PATH` | `/models/...` | Path to SDXL weights |
-| `ANIMATEDIFF_MODEL_PATH` | `/models/...` | Path to AnimateDiff weights |
 
 ---
 

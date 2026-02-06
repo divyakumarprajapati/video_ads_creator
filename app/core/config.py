@@ -52,12 +52,21 @@ class Settings(BaseSettings):
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
-    # ── Redis ──────────────────────────────────────────────
+    # ── Feature Flags (local-first defaults) ───────────────
+    use_celery: bool = False          # False = run workers in-process (thread)
+    redis_enabled: bool = False       # False = in-memory rate-limit & progress
+    storage_backend: str = "local"    # "local" or "s3"
+
+    # ── Redis (only used when redis_enabled=True) ──────────
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
-    # ── S3 Storage ─────────────────────────────────────────
+    # ── Local Storage ──────────────────────────────────────
+    local_storage_root: str = "./output"
+    local_storage_url_prefix: str = "http://localhost:8000/static"
+
+    # ── S3 Storage (only used when storage_backend="s3") ───
     s3_endpoint_url: str = "http://localhost:9000"
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"

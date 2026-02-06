@@ -172,9 +172,14 @@ class CampaignService:
         estimated_minutes = max(3, (num_products * 3 + 3) / max(1, 2))  # assume 2 workers
         campaign.estimated_completion = datetime.now(timezone.utc) + timedelta(minutes=estimated_minutes)
 
-        # 7. Dispatch Celery orchestrator (import here to avoid circular)
-        from app.workers.tasks import run_campaign_pipeline
-        run_campaign_pipeline.delay(str(campaign.id))
+        # 7. Dispatch worker (Celery or background thread)
+        from app.core.config import get_settings as _gs
+        if _gs().use_celery:
+            from app.workers.tasks import run_campaign_pipeline
+            run_campaign_pipeline.delay(str(campaign.id))
+        else:
+            from app.workers.sync_runner import dispatch_campaign
+            dispatch_campaign(str(campaign.id))
 
         logger.info(
             "campaign_created",
@@ -323,8 +328,13 @@ class CampaignService:
         await self.db.flush()
 
         # Dispatch orchestrator again
-        from app.workers.tasks import run_campaign_pipeline
-        run_campaign_pipeline.delay(str(campaign.id))
+        from app.core.config import get_settings as _gs
+        if _gs().use_celery:
+            from app.workers.tasks import run_campaign_pipeline
+            run_campaign_pipeline.delay(str(campaign.id))
+        else:
+            from app.workers.sync_runner import dispatch_campaign
+            dispatch_campaign(str(campaign.id))
 
         return {"campaign_id": str(campaign_id), "videos_reset": reset_count}
 

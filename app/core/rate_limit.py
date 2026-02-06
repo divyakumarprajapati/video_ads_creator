@@ -35,6 +35,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._local_store: dict[str, list[float]] = {}  # fallback
 
     def _get_redis(self):
+        if not settings.redis_enabled:
+            return None
         if self._redis is None:
             try:
                 import redis as _redis
