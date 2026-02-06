@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     app_name: str = "video-ads-engine"
     app_env: str = "development"
     debug: bool = True
-    log_level: str = "INFO"
+    # Default to quiet logs; set LOG_LEVEL=INFO/DEBUG to see more.
+    log_level: str = "ERROR"
 
     # ── API ────────────────────────────────────────────────
     api_host: str = "0.0.0.0"

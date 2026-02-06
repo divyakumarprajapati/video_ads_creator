@@ -227,7 +227,8 @@ Example: [{{"primary_message": "...", "secondary_message": "...", "cta_text": ".
         while len(copies) < num_variants:
             copies.append(copies[-1] if copies else ProductCopy("Check This Out", "See what's new", "Shop Now"))
 
-        logger.info("openai_product_copy_generated", product=product_name, variants=len(copies))
+        # Very chatty; keep at debug so normal runs stay clean.
+        logger.debug("openai_product_copy_generated", product=product_name, variants=len(copies))
         return copies
 
     except Exception as exc:
@@ -293,7 +294,8 @@ Example: [{{"primary_message": "...", "secondary_message": "...", "cta_text": ".
         while len(copies) < num_variants:
             copies.append(copies[-1] if copies else BrandCopy("Explore the Collection", "See what's new", "Visit Site"))
 
-        logger.info("openai_brand_copy_generated", variants=len(copies))
+        # Very chatty; keep at debug so normal runs stay clean.
+        logger.debug("openai_brand_copy_generated", variants=len(copies))
         return copies
 
     except Exception as exc:
