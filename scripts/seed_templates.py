@@ -18,10 +18,26 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 from app.core.config import get_settings
 
 settings = get_settings()
-engine = create_engine(settings.database_sync_url)
+
+def _normalise_sync_db_url(raw_url: str) -> str:
+    """
+    Ensure we use a sync DB driver for this script.
+
+    If DATABASE_SYNC_URL is accidentally configured with an async driver (e.g. asyncpg),
+    SQLAlchemy will raise MissingGreenlet when used with create_engine().
+    """
+    url = make_url(raw_url)
+    # Typical misconfig: postgresql+asyncpg://... used in a sync context.
+    if url.drivername.endswith("+asyncpg"):
+        url = url.set(drivername=url.drivername.replace("+asyncpg", "+psycopg2"))
+    return str(url)
+
+
+engine = create_engine(_normalise_sync_db_url(settings.database_sync_url))
 
 # ── Template definitions ────────────────────────────────────
 
