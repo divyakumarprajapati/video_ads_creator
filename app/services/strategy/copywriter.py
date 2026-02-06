@@ -69,14 +69,22 @@ def _chat(system: str, user: str) -> str:
     """Single-turn chat completion.  Raises on any failure."""
     client = _get_openai_client()
 
-    base_kwargs = {
+    base_kwargs: dict = {
         "model": settings.openai_model,
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        "temperature": settings.openai_temperature,
     }
+
+    # Some models (notably GPT-5.* chat models) only support the default temperature (1),
+    # and will error if any other value is provided. Avoid sending temperature in that case.
+    model_name = (settings.openai_model or "").lower()
+    if not model_name.startswith("gpt-5"):
+        base_kwargs["temperature"] = settings.openai_temperature
+    elif settings.openai_temperature == 1:
+        # Explicit 1 is safe, but leaving it unset also works.
+        base_kwargs["temperature"] = 1
 
     # Model compatibility:
     # - Some newer models reject `max_tokens` and require `max_completion_tokens`.
@@ -88,6 +96,11 @@ def _chat(system: str, user: str) -> str:
         )
     except Exception as exc:
         msg = str(exc)
+
+        # Retry without custom temperature if the model rejects it.
+        if "param': 'temperature'" in msg or "param\": \"temperature\"" in msg:
+            base_kwargs.pop("temperature", None)
+
         if (
             "max_completion_tokens" in msg
             and ("unsupported parameter" in msg.lower() or "unknown parameter" in msg.lower())
@@ -98,6 +111,11 @@ def _chat(system: str, user: str) -> str:
             )
         elif "Unsupported parameter: 'max_tokens'" in msg and "max_completion_tokens" in msg:
             # If we ever start with max_tokens again, retry with max_completion_tokens.
+            response = client.chat.completions.create(
+                **base_kwargs,
+                max_completion_tokens=settings.openai_max_tokens,
+            )
+        elif "Unsupported value: 'temperature'" in msg and "Only the default (1) value is supported" in msg:
             response = client.chat.completions.create(
                 **base_kwargs,
                 max_completion_tokens=settings.openai_max_tokens,
