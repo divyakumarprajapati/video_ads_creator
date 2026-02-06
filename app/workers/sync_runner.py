@@ -28,13 +28,14 @@ def dispatch_campaign(campaign_id: str) -> None:
         daemon=True,
     )
     t.start()
-    logger.info("Campaign %s dispatched to background thread", campaign_id)
+    # Keep this quiet by default; enable DEBUG to see dispatch chatter.
+    logger.debug("Campaign %s dispatched to background thread", campaign_id)
 
 
 def _run_in_thread(campaign_id: str) -> None:
     try:
         from app.workers.pipeline import run_campaign
         result = run_campaign(campaign_id)
-        logger.info("Campaign %s finished: %s", campaign_id, result.get("status"))
+        logger.debug("Campaign %s finished: %s", campaign_id, result.get("status"))
     except Exception:
         logger.exception("Campaign %s failed in background thread", campaign_id)

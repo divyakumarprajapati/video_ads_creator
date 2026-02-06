@@ -52,7 +52,14 @@ def setup_logging() -> None:
     if not root.handlers:
         root.addHandler(handler)
 
-    # Quieten noisy libraries
+    def _set_logger_level(name: str, level: int) -> None:
+        """Set logger + its handlers to *level* (some libs attach their own handlers)."""
+        log = logging.getLogger(name)
+        log.setLevel(level)
+        for h in log.handlers:
+            h.setLevel(level)
+
+    # Quieten noisy libraries.
     # Note: SQLAlchemy `echo=True` will still force SQL logs on; keep DB echo off by default.
     noisy_libs = (
         "uvicorn",
@@ -60,7 +67,6 @@ def setup_logging() -> None:
         "uvicorn.access",
         "sqlalchemy",
         "sqlalchemy.engine",
-        "sqlalchemy.engine.Engine",
         "sqlalchemy.pool",
         "asyncpg",
         "httpx",
@@ -70,7 +76,7 @@ def setup_logging() -> None:
         "urllib3",
     )
     for lib in noisy_libs:
-        logging.getLogger(lib).setLevel(logging.ERROR)
+        _set_logger_level(lib, logging.ERROR)
 
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
