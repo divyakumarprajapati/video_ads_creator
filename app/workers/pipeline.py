@@ -445,7 +445,8 @@ def run_campaign(campaign_id: str) -> Dict:
             camp_dir_path = os.path.join(BASE_OUTPUT, f"campaign_{cid}")
             if os.path.isdir(camp_dir_path):
                 storage.upload_directory(camp_dir_path, f"campaigns/{cid}")
-                logger.info("campaign_uploaded", campaign_id=cid)
+                # NOTE: This module uses stdlib logging; don't pass structured kwargs.
+                logger.info("campaign_uploaded campaign_id=%s", cid)
         except Exception as exc:
             logger.warning("Storage upload failed (non-fatal): %s", exc)
 
