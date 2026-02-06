@@ -87,6 +87,13 @@ cp .env.example .env
 # 2. Start Postgres (via Docker or use your own)
 docker compose -f docker-compose.local.yml up -d
 
+# If you see "database \"video_ads\" does not exist", create it once:
+# - Docker:
+#   docker compose -f docker-compose.local.yml exec postgres psql -U postgres -d postgres -c "CREATE DATABASE video_ads;"
+#   # (If you previously started Postgres with an existing `pgdata` volume, you may need: docker compose -f docker-compose.local.yml down -v)
+# - Local Postgres:
+#   psql -U postgres -d postgres -c "CREATE DATABASE video_ads;"
+
 # 3. Install Python dependencies
 pip install -r requirements.txt
 
