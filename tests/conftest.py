@@ -11,8 +11,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 # Ensure test env vars before any app import
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/video_ads_test")
-os.environ.setdefault("DATABASE_SYNC_URL", "postgresql+psycopg2://postgres:postgres@localhost:5432/video_ads_test")
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/video_ads_test")
+os.environ.setdefault("DATABASE_SYNC_URL", "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/video_ads_test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ.setdefault("CELERY_BROKER_URL", "redis://localhost:6379/14")
 os.environ.setdefault("CELERY_RESULT_BACKEND", "redis://localhost:6379/13")

@@ -47,8 +47,9 @@ class Settings(BaseSettings):
     api_key_header: str = "X-API-Key"
 
     # ── Database ───────────────────────────────────────────
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/video_ads"
-    database_sync_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/video_ads"
+    # Use 127.0.0.1 instead of localhost to avoid IPv6 (::1) surprises on macOS.
+    database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/video_ads"
+    database_sync_url: str = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/video_ads"
     database_pool_size: int = 20
     database_max_overflow: int = 10
 
