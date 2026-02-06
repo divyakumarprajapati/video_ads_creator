@@ -50,6 +50,24 @@ def _new_uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
+def _string_enum(enum_cls, *, name: str) -> Enum:  # type: ignore[type-arg]
+    """
+    Store domain enums as VARCHAR in Postgres.
+
+    Our Alembic schema uses plain string columns (not native Postgres ENUM types).
+    Using SQLAlchemy's default Enum(...) with Postgres will otherwise try to bind
+    values as ::<enumtype> (e.g. ::campaigngoal), which fails if the DB type
+    doesn't exist.
+    """
+
+    return Enum(
+        enum_cls,
+        native_enum=False,
+        values_callable=lambda e: [m.value for m in e],
+        validate_strings=True,
+        name=name,
+    )
+
 # ────────────────────────────────────────────────────────────
 #  Campaign
 # ────────────────────────────────────────────────────────────
@@ -66,7 +84,8 @@ class Campaign(Base):
 
     # Strategy inputs
     campaign_goal: Mapped[CampaignGoal] = mapped_column(
-        Enum(CampaignGoal), default=CampaignGoal.AWARENESS
+        _string_enum(CampaignGoal, name="campaign_goal"),
+        default=CampaignGoal.AWARENESS,
     )
     platforms: Mapped[list] = mapped_column(JSONB, default=list)  # list[Platform]
     duration_preference: Mapped[int] = mapped_column(Integer, default=15)  # seconds
@@ -85,7 +104,9 @@ class Campaign(Base):
 
     # Progress
     status: Mapped[CampaignStatus] = mapped_column(
-        Enum(CampaignStatus), default=CampaignStatus.DRAFT, index=True
+        _string_enum(CampaignStatus, name="campaign_status"),
+        default=CampaignStatus.DRAFT,
+        index=True,
     )
     overall_progress: Mapped[float] = mapped_column(Float, default=0.0)
     estimated_completion: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -135,7 +156,8 @@ class CampaignProduct(Base):
 
     # Processing state
     generation_status: Mapped[ProductGenerationStatus] = mapped_column(
-        Enum(ProductGenerationStatus), default=ProductGenerationStatus.PENDING
+        _string_enum(ProductGenerationStatus, name="product_generation_status"),
+        default=ProductGenerationStatus.PENDING,
     )
     progress: Mapped[float] = mapped_column(Float, default=0.0)
 
@@ -178,10 +200,16 @@ class CampaignVideo(Base):
         nullable=True,
     )
 
-    video_type: Mapped[VideoType] = mapped_column(Enum(VideoType), nullable=False)
+    video_type: Mapped[VideoType] = mapped_column(
+        _string_enum(VideoType, name="video_type"), nullable=False
+    )
     variant_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    variant_type: Mapped[VariantType] = mapped_column(Enum(VariantType), nullable=False)
-    message_angle: Mapped[MessageAngle] = mapped_column(Enum(MessageAngle), nullable=False)
+    variant_type: Mapped[VariantType] = mapped_column(
+        _string_enum(VariantType, name="variant_type"), nullable=False
+    )
+    message_angle: Mapped[MessageAngle] = mapped_column(
+        _string_enum(MessageAngle, name="message_angle"), nullable=False
+    )
 
     # Messaging
     primary_message: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -192,12 +220,16 @@ class CampaignVideo(Base):
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("video_templates.id", ondelete="SET NULL"), nullable=True
     )
-    layout_type: Mapped[LayoutType | None] = mapped_column(Enum(LayoutType), nullable=True)
+    layout_type: Mapped[LayoutType | None] = mapped_column(
+        _string_enum(LayoutType, name="layout_type"), nullable=True
+    )
     products_shown: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Status
     status: Mapped[VideoStatus] = mapped_column(
-        Enum(VideoStatus), default=VideoStatus.QUEUED, index=True
+        _string_enum(VideoStatus, name="video_status"),
+        default=VideoStatus.QUEUED,
+        index=True,
     )
     generation_progress: Mapped[float] = mapped_column(Float, default=0.0)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -242,7 +274,9 @@ class CampaignPlatformExport(Base):
     video_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("campaign_videos.id", ondelete="CASCADE"), nullable=False
     )
-    platform: Mapped[Platform] = mapped_column(Enum(Platform), nullable=False)
+    platform: Mapped[Platform] = mapped_column(
+        _string_enum(Platform, name="platform"), nullable=False
+    )
 
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     file_size_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
