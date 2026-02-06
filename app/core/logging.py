@@ -53,8 +53,24 @@ def setup_logging() -> None:
         root.addHandler(handler)
 
     # Quieten noisy libraries
-    for lib in ("uvicorn.access", "sqlalchemy.engine", "botocore", "urllib3"):
-        logging.getLogger(lib).setLevel(logging.WARNING)
+    # Note: SQLAlchemy `echo=True` will still force SQL logs on; keep DB echo off by default.
+    noisy_libs = (
+        "uvicorn",
+        "uvicorn.error",
+        "uvicorn.access",
+        "sqlalchemy",
+        "sqlalchemy.engine",
+        "sqlalchemy.engine.Engine",
+        "sqlalchemy.pool",
+        "asyncpg",
+        "httpx",
+        "openai",
+        "botocore",
+        "boto3",
+        "urllib3",
+    )
+    for lib in noisy_libs:
+        logging.getLogger(lib).setLevel(logging.ERROR)
 
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
