@@ -510,6 +510,37 @@ def run_campaign_pipeline(self, campaign_id: str) -> Dict:
         _update_campaign_record(cid, status=final_status, overall_progress=progress)
         update_campaign_progress(cid, progress, final_status)
 
+        # ── Generate campaign_summary.json ─────────────────
+        try:
+            from app.services.download import generate_campaign_summary
+            generate_campaign_summary(BASE_OUTPUT, cid, final_data)
+        except Exception as exc:
+            logger.warning("Failed to write campaign summary: %s", exc)
+
+        # ── Upload to S3 ───────────────────────────────────
+        try:
+            from app.services.storage.s3 import S3Storage
+            s3 = S3Storage()
+            s3.ensure_bucket()
+            camp_dir_path = os.path.join(BASE_OUTPUT, f"campaign_{cid}")
+            if os.path.isdir(camp_dir_path):
+                s3.upload_directory(camp_dir_path, f"campaigns/{cid}")
+                logger.info("campaign_uploaded_to_s3", campaign_id=cid)
+        except Exception as exc:
+            logger.warning("S3 upload failed (non-fatal): %s", exc)
+
+        # ── Fire webhook notifications ─────────────────────
+        webhook_config = data.get("brand_identity", {}).get("_webhook") or data.get("_webhook")
+        # Webhook URL is stored at campaign level if provided
+        _fire_campaign_webhook(cid, final_status, {
+            "campaign_id": cid,
+            "status": final_status,
+            "total_videos": total,
+            "completed": completed,
+            "failed": failed,
+            "progress": progress,
+        })
+
         return {
             "campaign_id": cid,
             "status": final_status,
@@ -522,4 +553,34 @@ def run_campaign_pipeline(self, campaign_id: str) -> Dict:
         logger.error("Campaign pipeline failed: %s", traceback.format_exc())
         _update_campaign_record(cid, status="failed", error_message=str(exc))
         update_campaign_progress(cid, 0, "failed")
+        _fire_campaign_webhook(cid, "failed", {
+            "campaign_id": cid,
+            "status": "failed",
+            "error": str(exc),
+        })
         raise
+
+
+def _fire_campaign_webhook(campaign_id: str, status: str, payload: dict) -> None:
+    """Fire webhook if campaign has a webhook_url configured."""
+    try:
+        from sqlalchemy import text
+        eng = _sync_engine()
+        with eng.connect() as conn:
+            row = conn.execute(
+                text("SELECT brand_identity FROM campaigns WHERE id = :cid"),
+                {"cid": campaign_id},
+            ).mappings().first()
+        if not row:
+            return
+        bi = row.get("brand_identity") or {}
+        webhook_url = bi.get("_webhook_url")
+        webhook_secret = bi.get("_webhook_secret")
+        if not webhook_url:
+            return
+
+        from app.services.webhook import send_webhook_sync
+        event = f"campaign.{status}"
+        send_webhook_sync(webhook_url, event, payload, secret=webhook_secret)
+    except Exception as exc:
+        logger.warning("Webhook fire failed: %s", exc)

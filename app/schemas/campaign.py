@@ -23,6 +23,16 @@ from app.schemas.product import ProductInput, ProductOut
 
 # ── Request: create campaign ────────────────────────────────
 
+class WebhookConfig(BaseModel):
+    """Optional webhook configuration for async notifications."""
+    url: str = Field(..., description="HTTPS endpoint to receive event callbacks")
+    secret: Optional[str] = Field(None, description="Shared secret for HMAC verification")
+    events: List[str] = Field(
+        default=["campaign.completed", "campaign.failed", "video.available"],
+        description="Events to subscribe to: campaign.completed, campaign.failed, video.available, progress.update",
+    )
+
+
 class CampaignCreate(BaseModel):
     """
     The **single** request body that kicks off an entire multi-product campaign.
@@ -42,6 +52,7 @@ class CampaignCreate(BaseModel):
     duration_preference: int = Field(15, ge=5, le=60, description="Preferred video length in seconds")
     product_specific_variants: int = Field(3, ge=1, le=5)
     general_brand_variants: int = Field(3, ge=1, le=5)
+    webhook: Optional[WebhookConfig] = Field(None, description="Webhook for async event notifications")
 
 
 # ── Response: campaign summary ──────────────────────────────

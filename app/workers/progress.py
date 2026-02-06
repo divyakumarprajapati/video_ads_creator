@@ -36,12 +36,20 @@ def _video_key(campaign_id: str, video_id: str) -> str:
 
 # ── Write (from workers) ──────────────────────────────────
 
-def update_campaign_progress(campaign_id: str, progress: float, status: str) -> None:
+def update_campaign_progress(
+    campaign_id: str,
+    progress: float,
+    status: str,
+    eta_seconds: Optional[float] = None,
+) -> None:
     r = _get_redis()
-    r.hset(_campaign_key(campaign_id), mapping={
+    data: Dict[str, str] = {
         "progress": str(progress),
         "status": status,
-    })
+    }
+    if eta_seconds is not None:
+        data["eta_seconds"] = str(eta_seconds)
+    r.hset(_campaign_key(campaign_id), mapping=data)
     r.expire(_campaign_key(campaign_id), 86400)
 
 

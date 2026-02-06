@@ -4,16 +4,21 @@ Pydantic models for product data.
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, field_validator
+
+# Supported image formats
+_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+_IMAGE_PATTERN = re.compile(r"https?://.+", re.IGNORECASE)
 
 
 class ProductInput(BaseModel):
     """Single product as submitted by the caller."""
     product_name: str = Field(..., min_length=1, max_length=256)
-    product_image_url: str = Field(..., description="URL to product image (JPG/PNG/WebP)")
+    product_image_url: str = Field(..., description="URL to product image (JPG/PNG/WebP, max 10 MB)")
     product_description: Optional[str] = None
     product_category: Optional[str] = None
     product_features: Optional[Dict[str, str]] = None
@@ -22,6 +27,18 @@ class ProductInput(BaseModel):
         None,
         description='E.g. {"is_new": true, "is_bestseller": false}',
     )
+
+    @field_validator("product_image_url")
+    @classmethod
+    def validate_image_url(cls, v: str) -> str:
+        if not _IMAGE_PATTERN.match(v):
+            raise ValueError("product_image_url must be a valid HTTP(S) URL")
+        # Check extension (loose check – actual content type is verified during download)
+        lower = v.lower().split("?")[0]  # strip query params
+        has_extension = any(lower.endswith(ext) for ext in _IMAGE_EXTENSIONS)
+        # Allow URLs without extension (CDNs, dynamic image servers, placeholder services)
+        # Actual content-type validation happens at download time
+        return v
 
 
 class ProductOut(BaseModel):

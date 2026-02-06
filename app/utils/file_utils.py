@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from python_slugify import slugify
+from slugify import slugify
 
 
 def campaign_dir(base: str, campaign_id: str) -> str:

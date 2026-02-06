@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func, select, update
@@ -65,6 +65,13 @@ class CampaignService:
         Create campaign → run strategy → insert video records → dispatch workers.
         """
         # 1. Insert campaign row
+        # Store webhook config inside brand_identity for worker access
+        brand_data = payload.brand_identity.model_dump()
+        if payload.webhook:
+            brand_data["_webhook_url"] = payload.webhook.url
+            brand_data["_webhook_secret"] = payload.webhook.secret
+            brand_data["_webhook_events"] = payload.webhook.events
+
         campaign = Campaign(
             project_id=payload.project_id,
             user_id=user_id,
@@ -72,7 +79,7 @@ class CampaignService:
             campaign_goal=payload.campaign_goal,
             platforms=[p.value for p in payload.platforms],
             duration_preference=payload.duration_preference,
-            brand_identity=payload.brand_identity.model_dump(),
+            brand_identity=brand_data,
             market_research=payload.market_research.model_dump(),
             product_specific_variants=payload.product_specific_variants,
             general_brand_variants=payload.general_brand_variants,
@@ -155,9 +162,15 @@ class CampaignService:
 
         await self.db.flush()
 
-        # 6. Update campaign status to "generating"
+        # 6. Update campaign status to "generating" with ETA
         campaign.status = CampaignStatus.GENERATING
         total_videos = len(video_models)
+
+        # Estimate completion: ~3 min per product + 3 min for brand videos
+        # (conservative; parallel processing makes this faster on multi-GPU)
+        num_products = len(product_models)
+        estimated_minutes = max(3, (num_products * 3 + 3) / max(1, 2))  # assume 2 workers
+        campaign.estimated_completion = datetime.now(timezone.utc) + timedelta(minutes=estimated_minutes)
 
         # 7. Dispatch Celery orchestrator (import here to avoid circular)
         from app.workers.tasks import run_campaign_pipeline

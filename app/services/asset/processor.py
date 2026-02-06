@@ -33,13 +33,39 @@ class AssetProcessor:
         self.work_dir = work_dir
         os.makedirs(work_dir, exist_ok=True)
 
+    MAX_IMAGE_SIZE_BYTES = settings.max_image_size_mb * 1024 * 1024
+    ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
     # ── Download ───────────────────────────────────────────
 
     def download_product_image(self, url: str, product_idx: int) -> str:
         dest = os.path.join(self.work_dir, f"product_{product_idx}_original.png")
         if os.path.exists(dest):
             return dest
-        return download_image(url, dest)
+        path = download_image(url, dest)
+        self._validate_image(path, product_idx)
+        return path
+
+    def _validate_image(self, path: str, product_idx: int) -> None:
+        """Check file size and image format after download."""
+        file_size = os.path.getsize(path)
+        if file_size > self.MAX_IMAGE_SIZE_BYTES:
+            raise ValueError(
+                f"Product {product_idx} image exceeds {settings.max_image_size_mb} MB limit "
+                f"(actual: {file_size / (1024*1024):.1f} MB)"
+            )
+        # Validate that Pillow can open it (format check)
+        try:
+            from PIL import Image
+            img = Image.open(path)
+            img.verify()
+            fmt = (img.format or "").lower()
+            if fmt not in ("jpeg", "jpg", "png", "webp"):
+                logger.warning("unusual_image_format", format=fmt, product_idx=product_idx)
+        except Exception as exc:
+            raise ValueError(
+                f"Product {product_idx} image is not a valid image file: {exc}"
+            )
 
     # ── Background removal ─────────────────────────────────
 
