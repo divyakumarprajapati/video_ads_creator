@@ -142,6 +142,37 @@ for layout in LAYOUTS:
             "performance_score": 55.0 + (hash(f"{layout}{vis}") % 25),
         })
 
+# 12 extras: industry-focused collection templates (4 layouts × 3 industries)
+EXTRA_INDUSTRY_VARIANTS = [
+    ("skincare", "soft_premium"),
+    ("fashion", "elegant"),
+    ("tech", "bold_vibrant"),
+]
+
+for layout in LAYOUTS:
+    for industry, vis in EXTRA_INDUSTRY_VARIANTS:
+        seed = f"tpl-multi-industry-{layout}-{industry}"
+        tpl_id = uuid.uuid5(uuid.NAMESPACE_DNS, seed)
+        spec = _multi_product_spec(layout) | {"focus_industry": industry}
+        templates.append({
+            "id": str(tpl_id),
+            "name": f"{industry.title()} {layout.replace('_', ' ').title()} Collection",
+            "description": f"Industry-focused multi-product {layout.replace('_', ' ')} for {industry}.",
+            "category": "multi_product",
+            "subcategory": f"{layout}_{industry}",
+            "template_spec": spec,
+            "compatible_visual_styles": [vis],
+            "compatible_video_styles": VIDEO_STYLES,
+            "compatible_industries": [industry],
+            "requires_product_image": True,
+            "requires_background": False,
+            "min_duration": spec["min_duration"],
+            "max_duration": spec["max_duration"],
+            "supported_aspect_ratios": ASPECT_RATIOS,
+            # Use uuid-derived int for stable scoring across runs.
+            "performance_score": 60.0 + (tpl_id.int % 25),
+        })
+
 assert len(templates) >= 100, f"Only {len(templates)} templates – need ≥ 100"
 
 # ── Insert into DB ──────────────────────────────────────────
