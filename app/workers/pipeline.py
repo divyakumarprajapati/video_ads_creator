@@ -9,7 +9,6 @@ They are called by:
 
 from __future__ import annotations
 
-import logging
 import os
 import traceback
 import uuid
@@ -30,7 +29,9 @@ from app.utils.file_utils import (
 )
 from app.workers.progress import update_campaign_progress, update_video_progress
 
-logger = logging.getLogger(__name__)
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 settings = get_settings()
 
 BASE_OUTPUT = os.environ.get("VIDEO_OUTPUT_DIR", os.path.abspath(
@@ -445,7 +446,7 @@ def run_campaign(campaign_id: str) -> Dict:
             camp_dir_path = os.path.join(BASE_OUTPUT, f"campaign_{cid}")
             if os.path.isdir(camp_dir_path):
                 storage.upload_directory(camp_dir_path, f"campaigns/{cid}")
-                logger.info("campaign_uploaded", campaign_id=cid)
+                logger.debug("campaign_uploaded", campaign_id=cid)
         except Exception as exc:
             logger.warning("Storage upload failed (non-fatal): %s", exc)
 
