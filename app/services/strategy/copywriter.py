@@ -68,15 +68,43 @@ def _get_openai_client():
 def _chat(system: str, user: str) -> str:
     """Single-turn chat completion.  Raises on any failure."""
     client = _get_openai_client()
-    response = client.chat.completions.create(
-        model=settings.openai_model,
-        messages=[
+
+    base_kwargs = {
+        "model": settings.openai_model,
+        "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        max_tokens=settings.openai_max_tokens,
-        temperature=settings.openai_temperature,
-    )
+        "temperature": settings.openai_temperature,
+    }
+
+    # Model compatibility:
+    # - Some newer models reject `max_tokens` and require `max_completion_tokens`.
+    # - Some older models/servers don't know about `max_completion_tokens`.
+    try:
+        response = client.chat.completions.create(
+            **base_kwargs,
+            max_completion_tokens=settings.openai_max_tokens,
+        )
+    except Exception as exc:
+        msg = str(exc)
+        if (
+            "max_completion_tokens" in msg
+            and ("unsupported parameter" in msg.lower() or "unknown parameter" in msg.lower())
+        ):
+            response = client.chat.completions.create(
+                **base_kwargs,
+                max_tokens=settings.openai_max_tokens,
+            )
+        elif "Unsupported parameter: 'max_tokens'" in msg and "max_completion_tokens" in msg:
+            # If we ever start with max_tokens again, retry with max_completion_tokens.
+            response = client.chat.completions.create(
+                **base_kwargs,
+                max_completion_tokens=settings.openai_max_tokens,
+            )
+        else:
+            raise
+
     return response.choices[0].message.content.strip()
 
 
