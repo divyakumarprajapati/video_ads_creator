@@ -46,6 +46,7 @@ from app.schemas.campaign import (
 )
 from app.schemas.product import ProductOut
 from app.services.strategy.engine import generate_campaign_strategy
+from app.services.asset.paths import to_relative_asset_path
 
 logger = get_logger(__name__)
 
@@ -254,9 +255,11 @@ class CampaignService:
 
         videos_out = []
         for v in campaign.videos:
-            exports = [
-                PlatformExportOut.model_validate(e) for e in v.exports
-            ]
+            exports: List[PlatformExportOut] = []
+            for e in v.exports:
+                out = PlatformExportOut.model_validate(e)
+                out.file_path = to_relative_asset_path(out.file_path)
+                exports.append(out)
             videos_out.append(VideoResultOut(
                 video_id=v.id,
                 video_type=v.video_type,
@@ -272,8 +275,8 @@ class CampaignService:
                 layout_type=v.layout_type.value if v.layout_type else None,
                 status=v.status,
                 quality_score=v.quality_score,
-                file_path=v.file_path,
-                thumbnail_path=v.thumbnail_path,
+                file_path=to_relative_asset_path(v.file_path),
+                thumbnail_path=to_relative_asset_path(v.thumbnail_path),
                 file_size_mb=v.file_size_mb,
                 duration_seconds=v.duration_seconds,
                 exports=exports,
