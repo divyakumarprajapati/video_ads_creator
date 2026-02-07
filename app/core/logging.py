@@ -62,9 +62,6 @@ def setup_logging() -> None:
     # Quieten noisy libraries.
     # Note: SQLAlchemy `echo=True` will still force SQL logs on; keep DB echo off by default.
     noisy_libs = (
-        "uvicorn",
-        "uvicorn.error",
-        "uvicorn.access",
         "sqlalchemy",
         "sqlalchemy.engine",
         "sqlalchemy.pool",
