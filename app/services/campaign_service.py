@@ -7,6 +7,7 @@ video record insertion, task dispatch, status queries, and result assembly.
 
 from __future__ import annotations
 
+import os
 import json
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -46,7 +47,7 @@ from app.schemas.campaign import (
 )
 from app.schemas.product import ProductOut
 from app.services.strategy.engine import generate_campaign_strategy
-from app.services.asset.paths import to_relative_asset_path
+from app.services.asset.paths import resolve_local_asset_path, to_relative_asset_path
 
 logger = get_logger(__name__)
 
@@ -260,6 +261,21 @@ class CampaignService:
                 out = PlatformExportOut.model_validate(e)
                 out.file_path = to_relative_asset_path(out.file_path)
                 exports.append(out)
+
+            thumb_rel = to_relative_asset_path(v.thumbnail_path)
+            file_rel = to_relative_asset_path(v.file_path)
+            if file_rel is None and thumb_rel:
+                # Prefer a stable master path colocated with the thumbnail.
+                candidate = f"{os.path.dirname(thumb_rel)}/master.mp4"
+                try:
+                    if resolve_local_asset_path(candidate).is_file():
+                        file_rel = candidate
+                except Exception:
+                    pass
+            if file_rel is None and exports:
+                # Fall back to first available export file (already normalized above).
+                file_rel = exports[0].file_path
+
             videos_out.append(VideoResultOut(
                 video_id=v.id,
                 video_type=v.video_type,
@@ -275,8 +291,8 @@ class CampaignService:
                 layout_type=v.layout_type.value if v.layout_type else None,
                 status=v.status,
                 quality_score=v.quality_score,
-                file_path=to_relative_asset_path(v.file_path),
-                thumbnail_path=to_relative_asset_path(v.thumbnail_path),
+                file_path=file_rel,
+                thumbnail_path=thumb_rel,
                 file_size_mb=v.file_size_mb,
                 duration_seconds=v.duration_seconds,
                 exports=exports,

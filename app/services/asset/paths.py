@@ -72,7 +72,11 @@ def to_relative_asset_path(path: str | None) -> str | None:
     # Normalize for output (API), keep it simple and URL-friendly.
     p = str(path).replace("\\", "/")
     if not os.path.isabs(p):
-        return p.lstrip("/")
+        rel = p.lstrip("/")
+        # Only accept already-campaign-scoped relative paths; otherwise the API can't serve it.
+        if _CAMPAIGN_PREFIX_RE.match(rel):
+            return rel
+        return None
 
     root = get_asset_root().replace("\\", "/")
     try:
