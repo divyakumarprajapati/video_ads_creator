@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import traceback
 import uuid
 from typing import Any, Dict, List, Optional
@@ -201,6 +202,14 @@ def process_product_videos(
             )
             exports = encoder.encode_all(master, out_dir, platform_enums, max_duration=duration)
 
+            # Persist a copy of the master into the campaign output dir so it can be served/downloaded.
+            master_out = os.path.join(out_dir, "master.mp4")
+            try:
+                if os.path.isfile(master) and not os.path.exists(master_out):
+                    shutil.copy2(master, master_out)
+            except Exception:
+                master_out = master
+
             for exp in exports:
                 if exp.file_path:
                     _insert_platform_export(
@@ -210,7 +219,7 @@ def process_product_videos(
 
             _update_video_record(
                 video_id, status="completed", generation_progress=100,
-                quality_score=qa_result.overall_score, file_path=master,
+                quality_score=qa_result.overall_score, file_path=master_out,
                 file_size_mb=file_size_mb(master),
                 thumbnail_path=exports[0].thumbnail_path if exports else None,
                 duration_seconds=float(duration),
@@ -284,6 +293,14 @@ def process_brand_videos(
             )
             exports = encoder.encode_all(master, out_dir, platform_enums, max_duration=duration)
 
+            # Persist a copy of the master into the campaign output dir so it can be served/downloaded.
+            master_out = os.path.join(out_dir, "master.mp4")
+            try:
+                if os.path.isfile(master) and not os.path.exists(master_out):
+                    shutil.copy2(master, master_out)
+            except Exception:
+                master_out = master
+
             for exp in exports:
                 if exp.file_path:
                     _insert_platform_export(
@@ -293,7 +310,7 @@ def process_brand_videos(
 
             _update_video_record(
                 video_id, status="completed", generation_progress=100,
-                quality_score=qa_result.overall_score, file_path=master,
+                quality_score=qa_result.overall_score, file_path=master_out,
                 file_size_mb=file_size_mb(master),
                 thumbnail_path=exports[0].thumbnail_path if exports else None,
                 duration_seconds=float(duration),

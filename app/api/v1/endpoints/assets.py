@@ -10,47 +10,15 @@ from __future__ import annotations
 import mimetypes
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import CurrentUser, get_current_user
-from app.db.session import get_db
-from app.services.asset.paths import (
-    extract_campaign_id_from_relative_path,
-    resolve_local_asset_path,
-)
-from app.services.campaign_service import CampaignService
+from app.services.asset.paths import resolve_local_asset_path
 
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 
-
-@router.get("/{relative_path:path}")
-async def get_asset(
-    relative_path: str,
-    download: bool = Query(False, description="Force Content-Disposition: attachment"),
-    db: AsyncSession = Depends(get_db),
-    user: CurrentUser = Depends(get_current_user),
-):
-    """
-    Serve an asset file by relative path.
-
-    The *relative_path* must start with one of:
-    - ``campaign_<uuid>/...``
-    - ``campaigns/<uuid>/...``
-    """
-    campaign_id = extract_campaign_id_from_relative_path(relative_path)
-    if not campaign_id:
-        raise HTTPException(
-            status_code=400,
-            detail="relative_path must start with campaign_<uuid>/... or campaigns/<uuid>/...",
-        )
-
-    # Enforce ownership: user can only fetch assets for their campaigns.
-    svc = CampaignService(db)
-    await svc._get_campaign(campaign_id, user.user_id)
-
+def _serve_asset(relative_path: str, *, download: bool) -> FileResponse:
     try:
         path: Path = resolve_local_asset_path(relative_path)
     except ValueError as exc:
@@ -73,3 +41,21 @@ async def get_asset(
         )
 
     return FileResponse(str(path), media_type=media_type)
+
+
+@router.get("")
+async def get_asset_by_query(
+    relative_path: str = Query(..., description="Relative path under the asset root"),
+    download: bool = Query(False, description="Force Content-Disposition: attachment"),
+):
+    """Serve an asset by query parameter (no authentication required)."""
+    return _serve_asset(relative_path, download=download)
+
+
+@router.get("/{relative_path:path}")
+async def get_asset(
+    relative_path: str,
+    download: bool = Query(False, description="Force Content-Disposition: attachment"),
+):
+    """Serve an asset by path parameter (no authentication required)."""
+    return _serve_asset(relative_path, download=download)
