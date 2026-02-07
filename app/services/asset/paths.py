@@ -89,8 +89,8 @@ def to_relative_asset_path(path: str | None) -> str | None:
         if idx != -1:
             return p[idx + 1 :].lstrip("/")
 
-    # Last resort: just return the filename (still relative).
-    return os.path.basename(p)
+    # If we can't map it into the asset root, don't guess (would be unservable/misleading).
+    return None
 
 
 def resolve_local_asset_path(relative_path: str) -> Path:
