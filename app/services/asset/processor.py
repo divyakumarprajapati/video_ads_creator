@@ -19,6 +19,9 @@ from app.utils.image import (
     create_gradient_background,
     create_solid_background,
     download_image,
+    enhance_image,
+    extract_subject_rgba,
+    trim_transparent,
     resize_image,
 )
 
@@ -79,15 +82,24 @@ class AssetProcessor:
 
             inp = Image.open(image_path)
             out = remove(inp)
+            out = trim_transparent(out)
             out.save(dest)
             logger.info("background_removed", product_idx=product_idx)
             return dest
         except Exception as exc:
             logger.warning("rembg_failed_falling_back", error=str(exc))
-            # Fallback: just copy the original
-            import shutil
-            shutil.copy2(image_path, dest)
-            return dest
+            try:
+                from PIL import Image
+                raw = Image.open(image_path)
+                cleaned = extract_subject_rgba(raw)
+                cleaned = enhance_image(cleaned)
+                cleaned.save(dest)
+                return dest
+            except Exception:
+                # Last-resort fallback: copy original
+                import shutil
+                shutil.copy2(image_path, dest)
+                return dest
 
     # ── Upscale ────────────────────────────────────────────
 

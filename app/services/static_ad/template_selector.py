@@ -38,7 +38,6 @@ GOAL_CATEGORY_AFFINITY: Dict[CampaignGoal, List[str]] = {
     CampaignGoal.CONVERSION: [
         "urgency_countdown",
         "before_after",
-        "social_proof_carousel",
         "problem_agitation_solution",
         "testimonial_trust",
     ],
@@ -65,7 +64,6 @@ ANGLE_CATEGORY_AFFINITY: Dict[MessageAngle, List[str]] = {
     ],
     MessageAngle.SOCIAL_PROOF: [
         "testimonial_trust",
-        "social_proof_carousel",
         "ugc_authenticity",
         "stat_impact_dashboard",
     ],
@@ -109,10 +107,16 @@ INDUSTRY_KEYWORDS: Dict[str, List[str]] = {
 
 # Age-group preferred aesthetics
 AGE_CATEGORY_AFFINITY: Dict[str, List[str]] = {
-    "gen_z": ["ugc_authenticity", "lifestyle_context", "social_proof_carousel"],
+    "gen_z": ["ugc_authenticity", "lifestyle_context", "testimonial_trust"],
     "millennial": ["hero_product_showcase", "lifestyle_context", "feature_highlight"],
     "gen_x": ["comparison_table", "benefit_grid", "testimonial_trust"],
     "boomer": ["testimonial_trust", "stat_impact_dashboard", "how_it_works"],
+}
+
+# Templates that require multiple images or carousel-style assets
+EXCLUDED_CATEGORIES = {
+    "social_proof_carousel",
+    "before_after_triptych",
 }
 
 # Sentiment → template tone
@@ -327,6 +331,8 @@ def select_static_ad_templates(
         for tpl in all_templates:
             if tpl.template_id in exclude_set or tpl.template_id in used_ids:
                 continue
+            if tpl.category in EXCLUDED_CATEGORIES or "carousel" in tpl.template_id:
+                continue
             s = _score_template(
                 tpl,
                 goal=goal,
@@ -378,7 +384,6 @@ def select_brand_static_templates(
     Uses per-variant angle scoring like the product selector.
     """
     brand_preferred_categories = [
-        "social_proof_carousel",
         "benefit_grid",
         "stat_impact_dashboard",
         "comparison_table",
@@ -398,6 +403,8 @@ def select_brand_static_templates(
         scored: List[Tuple[float, StaticAdTemplate]] = []
         for tpl in all_templates:
             if tpl.template_id in used_ids:
+                continue
+            if tpl.category in EXCLUDED_CATEGORIES or "carousel" in tpl.template_id:
                 continue
             s = _score_template(
                 tpl,

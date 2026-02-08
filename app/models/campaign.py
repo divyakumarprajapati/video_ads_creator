@@ -150,11 +150,13 @@ class CampaignProduct(Base):
 
     product_name: Mapped[str] = mapped_column(String(256), nullable=False)
     product_image_url: Mapped[str] = mapped_column(Text, nullable=False)
+    product_image_urls: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     product_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     product_category: Mapped[str | None] = mapped_column(String(128), nullable=True)
     product_features: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     tags: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # {"is_new": bool, "is_bestseller": bool}
+    image_urls: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Per-product creative plan produced by the strategy engine
     creative_plan: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

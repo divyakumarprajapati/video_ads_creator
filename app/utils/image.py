@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 from app.core.logging import get_logger
 
@@ -143,3 +143,102 @@ def render_text_image(
 def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i: i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+def _estimate_background_color(arr: np.ndarray, sample: int = 12) -> Tuple[int, int, int]:
+    """Estimate background color by sampling the image borders."""
+    h, w = arr.shape[:2]
+    if h == 0 or w == 0:
+        return (255, 255, 255)
+
+    coords = [(0, 0), (0, w - 1), (h - 1, 0), (h - 1, w - 1)]
+    step = max(1, min(h, w) // sample)
+    for x in range(0, w, step):
+        coords.append((0, x))
+        coords.append((h - 1, x))
+    for y in range(0, h, step):
+        coords.append((y, 0))
+        coords.append((y, w - 1))
+
+    colors = [arr[y, x, :3] for (y, x) in coords]
+    median = np.median(np.array(colors), axis=0)
+    return (int(median[0]), int(median[1]), int(median[2]))
+
+
+def trim_transparent(img: Image.Image, padding: int = 8, min_alpha: int = 12) -> Image.Image:
+    """Trim transparent borders with optional padding."""
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    alpha = img.getchannel("A")
+    mask = alpha.point(lambda a: 255 if a > min_alpha else 0)
+    bbox = mask.getbbox()
+    if not bbox:
+        return img
+    x1, y1, x2, y2 = bbox
+    x1 = max(0, x1 - padding)
+    y1 = max(0, y1 - padding)
+    x2 = min(img.width, x2 + padding)
+    y2 = min(img.height, y2 + padding)
+    return img.crop((x1, y1, x2, y2))
+
+
+def extract_subject_rgba(
+    img: Image.Image,
+    *,
+    bg_threshold: int = 28,
+    min_alpha: int = 12,
+) -> Image.Image:
+    """
+    Heuristic background removal with edge sampling + crop.
+    Uses alpha if present; otherwise estimates background from borders.
+    """
+    img = img.convert("RGBA")
+    arr = np.array(img)
+    alpha = arr[:, :, 3]
+
+    if alpha.min() < 250:
+        alpha = np.where(alpha > min_alpha, alpha, 0)
+    else:
+        bg = _estimate_background_color(arr)
+        diff = np.sqrt(((arr[:, :, :3].astype("int32") - np.array(bg)) ** 2).sum(axis=2))
+        thresholds = [bg_threshold, 18, 35, 45]
+        mask = diff > thresholds[0]
+        coverage = mask.mean()
+        for t in thresholds[1:]:
+            if 0.02 < coverage < 0.98:
+                break
+            mask = diff > t
+            coverage = mask.mean()
+
+        mask_img = Image.fromarray((mask * 255).astype(np.uint8), mode="L")
+        mask_img = mask_img.filter(ImageFilter.MaxFilter(5))
+        mask_img = mask_img.filter(ImageFilter.GaussianBlur(1))
+        alpha = np.array(mask_img)
+
+    # Apply alpha and crop
+    out = img.copy()
+    out.putalpha(Image.fromarray(alpha.astype(np.uint8), mode="L"))
+    out = trim_transparent(out, padding=6, min_alpha=min_alpha)
+
+    # Safety: if crop is too tiny, return original
+    if out.width < img.width * 0.25 or out.height < img.height * 0.25:
+        return img
+    return out
+
+
+def enhance_image(
+    img: Image.Image,
+    *,
+    brightness: float = 1.02,
+    contrast: float = 1.08,
+    color: float = 1.06,
+    sharpness: float = 1.08,
+) -> Image.Image:
+    """Subtle enhancement for product imagery."""
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    img = ImageEnhance.Brightness(img).enhance(brightness)
+    img = ImageEnhance.Contrast(img).enhance(contrast)
+    img = ImageEnhance.Color(img).enhance(color)
+    img = ImageEnhance.Sharpness(img).enhance(sharpness)
+    return img

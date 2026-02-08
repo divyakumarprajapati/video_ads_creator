@@ -359,8 +359,7 @@ def process_static_ads(
     static_ad_records: List[Dict],
     brand_identity: Dict,
     products: List[Dict],
-    product_composites: Optional[List[str]] = None,
-    product_data_map: Optional[Dict[str, Dict]] = None,
+    product_assets_map: Optional[Dict[str, Dict]] = None,
 ) -> Dict:
     """
     Generate static ad images for all static ad records in the campaign.
@@ -380,18 +379,10 @@ def process_static_ads(
         generator = StaticAdGenerator(work)
         qa = StaticAdValidator()
 
-        # Build product lookup and composite lookup
+        # Build product lookup
         product_map: Dict[str, Dict] = {}
         for prod in products:
             product_map[str(prod["id"])] = prod
-
-        # Map product_id → pre-processed composite path
-        composite_by_product: Dict[str, str] = {}
-        if product_composites and product_data_map:
-            for pid, pdata in (product_data_map or {}).items():
-                idx = pdata.get("product_index", 0)
-                if idx < len(product_composites):
-                    composite_by_product[pid] = product_composites[idx]
 
         brand_colors = brand_identity.get("colors", {})
         brand_name = brand_identity.get("brand_name", "")
@@ -423,9 +414,15 @@ def process_static_ads(
                 image_url = sa.get("image_url", "")
                 product_id = sa.get("product_id")
 
-                if product_id and str(product_id) in composite_by_product:
-                    # Use the pipeline-processed composite (bg removed, brand bg)
-                    product_image_source = composite_by_product[str(product_id)]
+                if product_id and product_assets_map and str(product_id) in product_assets_map:
+                    # Prefer bg-removed upscaled asset for static ads
+                    assets = product_assets_map[str(product_id)]
+                    product_image_source = (
+                        assets.get("upscaled")
+                        or assets.get("no_bg")
+                        or assets.get("composite")
+                        or ""
+                    )
                 elif product_id and str(product_id) in product_map:
                     # Fall back to raw product URL
                     product_image_source = product_map[str(product_id)].get("product_image_url", "")
@@ -588,6 +585,7 @@ def run_campaign(campaign_id: str) -> Dict:
 
         # Pre-download and composite all product images
         product_composites: List[str] = []
+        product_assets_map: Dict[str, Dict] = {}
         product_data_map: Dict[str, Dict] = {}
         for idx, prod in enumerate(products):
             prod_dict = dict(prod)
@@ -601,6 +599,7 @@ def run_campaign(campaign_id: str) -> Dict:
                     bg_secondary=bg_secondary,
                 )
                 product_composites.append(assets["composite"])
+                product_assets_map[str(prod["id"])] = assets
             except Exception as exc:
                 logger.warning("Asset prep failed for product %s: %s", prod["id"], exc)
 
@@ -643,8 +642,7 @@ def run_campaign(campaign_id: str) -> Dict:
                     # bg-removed product images on brand backgrounds
                     process_static_ads(
                         cid, queued_static, brand_identity, products,
-                        product_composites=product_composites,
-                        product_data_map=product_data_map,
+                        product_assets_map=product_assets_map,
                     )
             except Exception as exc:
                 logger.error("Static ads failed: %s", exc)

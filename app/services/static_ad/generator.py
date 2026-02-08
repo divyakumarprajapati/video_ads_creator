@@ -16,6 +16,7 @@ Supports:
 
 from __future__ import annotations
 
+import hashlib
 import math
 import os
 import textwrap
@@ -25,7 +26,13 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from app.core.logging import get_logger
 from app.services.static_ad.template_registry import StaticAdTemplate
-from app.utils.image import download_image, _hex_to_rgb
+from app.utils.image import (
+    download_image,
+    enhance_image,
+    extract_subject_rgba,
+    trim_transparent,
+    _hex_to_rgb,
+)
 
 logger = get_logger(__name__)
 
@@ -208,6 +215,31 @@ def _draw_text_block(
     return total_height
 
 
+def _cache_key(source: str) -> str:
+    return hashlib.sha1(source.encode("utf-8")).hexdigest()[:10]
+
+
+def _load_image(
+    path_or_url: str,
+    work_dir: str,
+    name: str,
+) -> Optional[Image.Image]:
+    """Load an image from path or URL with a per-source cache key."""
+    try:
+        if path_or_url.startswith(("http://", "https://")):
+            key = _cache_key(path_or_url)
+            dest = os.path.join(work_dir, f"_dl_{name}_{key}.png")
+            if not os.path.exists(dest):
+                download_image(path_or_url, dest)
+            img = Image.open(dest)
+        else:
+            img = Image.open(path_or_url)
+        return img
+    except Exception as exc:
+        logger.warning("image_load_failed", error=str(exc), source=path_or_url[:80])
+        return None
+
+
 def _load_and_fit_image(
     path_or_url: str,
     work_dir: str,
@@ -215,21 +247,32 @@ def _load_and_fit_image(
     name: str = "img",
 ) -> Optional[Image.Image]:
     """Load an image from path or URL and resize to fit target_size."""
-    try:
-        if path_or_url.startswith(("http://", "https://")):
-            dest = os.path.join(work_dir, f"_dl_{name}.png")
-            if not os.path.exists(dest):
-                download_image(path_or_url, dest)
-            img = Image.open(dest)
-        else:
-            img = Image.open(path_or_url)
-
-        img = img.convert("RGBA")
-        img.thumbnail(target_size, Image.LANCZOS)
-        return img
-    except Exception as exc:
-        logger.warning("image_load_failed", error=str(exc), source=path_or_url[:80])
+    img = _load_image(path_or_url, work_dir, name)
+    if not img:
         return None
+    img = img.convert("RGBA")
+    img.thumbnail(target_size, Image.LANCZOS)
+    return img
+
+
+def _load_product_image(
+    path_or_url: str,
+    work_dir: str,
+    target_size: Tuple[int, int],
+    name: str = "prod",
+    bg_remove: bool = True,
+) -> Optional[Image.Image]:
+    """Load and clean a product image (bg removal + enhancement)."""
+    img = _load_image(path_or_url, work_dir, name)
+    if not img:
+        return None
+    img = img.convert("RGBA")
+    if bg_remove:
+        img = extract_subject_rgba(img)
+    img = enhance_image(img)
+    img = trim_transparent(img, padding=6)
+    img.thumbnail(target_size, Image.LANCZOS)
+    return img
 
 
 def _prepare_product_on_brand_bg(
@@ -254,14 +297,9 @@ def _prepare_product_on_brand_bg(
     """
     try:
         # Step 1: Load the image
-        if path_or_url.startswith(("http://", "https://")):
-            dest = os.path.join(work_dir, f"_dl_{name}_raw.png")
-            if not os.path.exists(dest):
-                download_image(path_or_url, dest)
-            raw = Image.open(dest)
-        else:
-            raw = Image.open(path_or_url)
-
+        raw = _load_image(path_or_url, work_dir, f"{name}_raw")
+        if raw is None:
+            return None
         raw = raw.convert("RGBA")
 
         # Step 2: Try background removal
@@ -276,7 +314,7 @@ def _prepare_product_on_brand_bg(
             except Exception:
                 # rembg not available — analyse if image is mostly dark/uniform
                 # and if so, try to extract the non-background portion
-                product_img = _auto_clean_product(raw)
+                product_img = extract_subject_rgba(raw)
         else:
             product_img = Image.open(nobg_path).convert("RGBA")
 
@@ -506,24 +544,7 @@ class StaticAdGenerator:
         bg_color = _parse_color(brand_colors.get("background", "#FFFFFF"))
         text_color = _parse_color(brand_colors.get("text", "#000000"))
 
-        # Pre-process: if img_source is a URL (not already a processed composite),
-        # create a brand-themed product composite with bg removal + brand bg
-        if img_source and not os.path.isfile(img_source):
-            # It's a URL - needs full processing
-            branded_composite = _prepare_product_on_brand_bg(
-                img_source, self.work_dir,
-                (width, height),
-                bg_color, secondary,
-                name=f"branded_v{variant_id}",
-            )
-            if branded_composite:
-                # Save the composite for use by renderers
-                comp_path = os.path.join(self.work_dir, f"_composite_v{variant_id}.png")
-                branded_composite.save(comp_path)
-                img_source = comp_path
-        elif img_source and os.path.isfile(img_source):
-            # It's already a local file (processed composite from pipeline)
-            pass
+        # Image processing is handled at render-time (bg removal, trimming, enhancement).
 
         # Route to category-specific renderer
         category = template.category
@@ -645,6 +666,31 @@ class StaticAdGenerator:
         brand_name, logo_url, img_source,
     ) -> Image.Image:
         """Hero product layout: product on one side, text on the other."""
+        tid = (template.template_id or "").lower()
+        if "hero_product_showcase_02" in tid:
+            return self._render_hero_center_stage(
+                template, w, h, headline, subheading, cta,
+                primary, secondary, accent, bg, text_color,
+                brand_name, logo_url, img_source,
+            )
+        if "hero_product_showcase_03" in tid:
+            return self._render_hero_diagonal(
+                template, w, h, headline, subheading, cta,
+                primary, secondary, accent, bg, text_color,
+                brand_name, logo_url, img_source,
+            )
+        if "hero_product_showcase_04" in tid:
+            return self._render_hero_floating(
+                template, w, h, headline, subheading, cta,
+                primary, secondary, accent, bg, text_color,
+                brand_name, logo_url, img_source,
+            )
+        if "hero_product_showcase_05" in tid:
+            return self._render_hero_reflection(
+                template, w, h, headline, subheading, cta,
+                primary, secondary, accent, bg, text_color,
+                brand_name, logo_url, img_source,
+            )
         img = Image.new("RGBA", (w, h), bg + (255,))
 
         # Left side: rich gradient with subtle secondary blend
@@ -668,7 +714,7 @@ class StaticAdGenerator:
 
         # Product image with drop shadow (right 55%)
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod")
             if prod_img:
                 prod_with_shadow = _add_drop_shadow(prod_img, offset=(6, 6), blur_radius=12)
                 px = int(w * 0.50) + (int(w * 0.50) - prod_with_shadow.width) // 2
@@ -724,6 +770,272 @@ class StaticAdGenerator:
             draw.text((btn_x + 26, btn_y + 14), cta, fill=_contrast_color(accent), font=cta_font)
 
         return img.convert("RGB")
+
+    def _render_hero_center_stage(
+        self, template, w, h, headline, subheading, cta,
+        primary, secondary, accent, bg, text_color,
+        brand_name, logo_url, img_source,
+    ) -> Image.Image:
+        """Center stage layout with radial gradient and product card."""
+        img = Image.new("RGB", (w, h), bg)
+        _draw_radial_gradient(
+            img,
+            center=(w // 2, int(h * 0.45)),
+            radius=int(min(w, h) * 0.65),
+            color_center=_lighten(primary, 0.35),
+            color_edge=_lighten(bg, 0.05),
+        )
+        img = _apply_subtle_texture(img, intensity=0.02)
+        draw = ImageDraw.Draw(img)
+
+        # Logo or brand name at top center
+        y_cursor = int(h * 0.05)
+        if logo_url:
+            logo_img = _load_and_fit_image(logo_url, self.work_dir, (140, 60), "logo")
+            if logo_img:
+                lx = (w - logo_img.width) // 2
+                img.paste(logo_img, (lx, y_cursor), logo_img if logo_img.mode == "RGBA" else None)
+                y_cursor += 70
+        if brand_name and not logo_url:
+            bf = _get_font(22, bold=False)
+            bw, bh = _text_size(draw, brand_name, bf)
+            draw.text(((w - bw) // 2, y_cursor), brand_name.upper(), fill=_darken(text_color, 0.2), font=bf)
+            y_cursor += bh + 10
+
+        # Headline
+        hf = _get_font(min(52, w // 18), bold=True)
+        _draw_text_block(draw, headline, (int(w * 0.08), y_cursor), hf, text_color, int(w * 0.84), "center", 8)
+
+        # Product card
+        if img_source:
+            card_w = int(w * 0.58)
+            card_h = int(h * 0.42)
+            card_x = (w - card_w) // 2
+            card_y = int(h * 0.28)
+            card_bg = _lighten(bg, 0.12) if _luminance(*bg) < 200 else _darken(bg, 0.02)
+            card = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
+            card_draw = ImageDraw.Draw(card)
+            _draw_rounded_rect(card_draw, (0, 0, card_w, card_h), fill=card_bg, radius=26)
+            # subtle border
+            try:
+                card_draw.rounded_rectangle((1, 1, card_w - 1, card_h - 1), radius=26,
+                                            outline=_lighten(primary, 0.6), width=2)
+            except AttributeError:
+                card_draw.rectangle((1, 1, card_w - 1, card_h - 1), outline=_lighten(primary, 0.6), width=2)
+            card_shadow = _add_drop_shadow(card, offset=(0, 8), blur_radius=18, shadow_color=(0, 0, 0, 70))
+            img.paste(card_shadow, (card_x - 6, card_y - 6), card_shadow)
+            img.paste(card, (card_x, card_y), card)
+
+            prod_img = _load_product_image(img_source, self.work_dir, (int(card_w * 0.72), int(card_h * 0.72)), "center_prod")
+            if prod_img:
+                px = card_x + (card_w - prod_img.width) // 2
+                py = card_y + (card_h - prod_img.height) // 2
+                img.paste(prod_img, (px, py), prod_img)
+
+        # Subheading + CTA
+        if subheading:
+            sf = _get_font(min(22, w // 40), bold=False)
+            _draw_text_block(draw, subheading, (int(w * 0.12), int(h * 0.74)), sf, _darken(text_color, 0.25), int(w * 0.76), "center", 6)
+
+        if cta:
+            cta_font = _get_font(min(24, w // 36), bold=True)
+            cw, ch = _text_size(draw, cta, cta_font)
+            btn_w = cw + 60
+            btn_h = ch + 26
+            btn_x = (w - btn_w) // 2
+            btn_y = h - int(h * 0.12) - btn_h
+            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), fill=accent, radius=btn_h // 2)
+            draw.text((btn_x + 30, btn_y + 13), cta, fill=_contrast_color(accent), font=cta_font)
+
+        return img
+
+    def _render_hero_diagonal(
+        self, template, w, h, headline, subheading, cta,
+        primary, secondary, accent, bg, text_color,
+        brand_name, logo_url, img_source,
+    ) -> Image.Image:
+        """Diagonal split layout for energetic products."""
+        img = Image.new("RGB", (w, h), _lighten(bg, 0.04))
+        draw = ImageDraw.Draw(img)
+
+        # Diagonal split polygons
+        draw.polygon([(0, 0), (int(w * 0.7), 0), (0, int(h * 0.7))], fill=_darken(primary, 0.85))
+        draw.polygon([(w, h), (int(w * 0.3), h), (w, int(h * 0.3))], fill=_lighten(secondary, 0.1))
+        draw.line([(int(w * 0.68), 0), (0, int(h * 0.68))], fill=accent, width=4)
+
+        left_text_color = _contrast_color(_darken(primary, 0.85))
+        margin = int(w * 0.06)
+
+        # Brand mark
+        y_cursor = int(h * 0.06)
+        if logo_url:
+            logo_img = _load_and_fit_image(logo_url, self.work_dir, (120, 50), "logo")
+            if logo_img:
+                img.paste(logo_img, (margin, y_cursor), logo_img if logo_img.mode == "RGBA" else None)
+                y_cursor += 60
+        if brand_name:
+            bf = _get_font(20, bold=False)
+            draw.text((margin, y_cursor), brand_name.upper(), fill=_lighten(left_text_color, 0.2), font=bf)
+            y_cursor += 34
+
+        # Headline and subheading
+        hf = _get_font(min(46, w // 20), bold=True)
+        text_w = int(w * 0.5)
+        head_h = _draw_text_block(draw, headline, (margin, y_cursor), hf, left_text_color, text_w, "left", 8)
+        y_cursor += head_h + 8
+        if subheading:
+            sf = _get_font(min(22, w // 40), bold=False)
+            _draw_text_block(draw, subheading, (margin, y_cursor), sf, _lighten(left_text_color, 0.25), text_w, "left", 6)
+
+        # Product on lower-right
+        if img_source:
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.60)), "diag_prod")
+            if prod_img:
+                prod_img = _add_drop_shadow(prod_img, offset=(8, 10), blur_radius=16)
+                px = int(w * 0.52) + (int(w * 0.45) - prod_img.width) // 2
+                py = int(h * 0.40)
+                img.paste(prod_img, (px, py), prod_img)
+
+        if cta:
+            cta_font = _get_font(min(24, w // 36), bold=True)
+            cw, ch = _text_size(draw, cta, cta_font)
+            btn_w = cw + 52
+            btn_h = ch + 24
+            btn_x = margin
+            btn_y = h - int(h * 0.12) - btn_h
+            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), fill=accent, radius=btn_h // 2)
+            draw.text((btn_x + 26, btn_y + 12), cta, fill=_contrast_color(accent), font=cta_font)
+
+        return img
+
+    def _render_hero_floating(
+        self, template, w, h, headline, subheading, cta,
+        primary, secondary, accent, bg, text_color,
+        brand_name, logo_url, img_source,
+    ) -> Image.Image:
+        """Floating product card with feature bullets."""
+        img = Image.new("RGB", (w, h), _lighten(bg, 0.04))
+        draw = ImageDraw.Draw(img)
+
+        # Soft background accents
+        _draw_radial_gradient(img, (int(w * 0.2), int(h * 0.2)), int(w * 0.35), _lighten(primary, 0.4), _lighten(bg, 0.02))
+        _draw_radial_gradient(img, (int(w * 0.85), int(h * 0.85)), int(w * 0.35), _lighten(secondary, 0.5), _lighten(bg, 0.02))
+
+        # Product card
+        card_w = int(w * 0.46)
+        card_h = int(h * 0.68)
+        card_x = int(w * 0.06)
+        card_y = int(h * 0.16)
+        card = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
+        card_draw = ImageDraw.Draw(card)
+        card_bg = _lighten(bg, 0.12) if _luminance(*bg) < 200 else _darken(bg, 0.02)
+        _draw_rounded_rect(card_draw, (0, 0, card_w, card_h), fill=card_bg, radius=28)
+        card_shadow = _add_drop_shadow(card, offset=(0, 10), blur_radius=18, shadow_color=(0, 0, 0, 70))
+        img.paste(card_shadow, (card_x - 8, card_y - 8), card_shadow)
+        img.paste(card, (card_x, card_y), card)
+
+        if img_source:
+            prod_img = _load_product_image(img_source, self.work_dir, (int(card_w * 0.78), int(card_h * 0.70)), "float_prod")
+            if prod_img:
+                px = card_x + (card_w - prod_img.width) // 2
+                py = card_y + int(card_h * 0.12)
+                img.paste(prod_img, (px, py), prod_img)
+
+        # Right side text
+        text_x = int(w * 0.56)
+        y_cursor = int(h * 0.18)
+        if logo_url:
+            logo_img = _load_and_fit_image(logo_url, self.work_dir, (120, 50), "logo")
+            if logo_img:
+                img.paste(logo_img, (text_x, y_cursor), logo_img if logo_img.mode == "RGBA" else None)
+                y_cursor += 60
+        if brand_name and not logo_url:
+            bf = _get_font(18, bold=False)
+            draw.text((text_x, y_cursor), brand_name.upper(), fill=_darken(text_color, 0.2), font=bf)
+            y_cursor += 28
+
+        hf = _get_font(min(40, w // 22), bold=True)
+        head_h = _draw_text_block(draw, headline, (text_x, y_cursor), hf, text_color, int(w * 0.38), "left", 6)
+        y_cursor += head_h + 6
+
+        # Feature bullets from body/subheading
+        bullets = [s.strip() for s in (subheading or "").split(".") if s.strip()]
+        if not bullets:
+            bullets = [subheading] if subheading else []
+        bullets = bullets[:4]
+
+        bf = _get_font(min(20, w // 44), bold=False)
+        for b in bullets:
+            draw.ellipse((text_x, y_cursor + 6, text_x + 8, y_cursor + 14), fill=accent)
+            _draw_text_block(draw, b, (text_x + 14, y_cursor), bf, _darken(text_color, 0.1), int(w * 0.34), "left", 4)
+            y_cursor += 28
+
+        if cta:
+            cta_font = _get_font(min(24, w // 36), bold=True)
+            cw, ch = _text_size(draw, cta, cta_font)
+            btn_w = cw + 46
+            btn_h = ch + 22
+            btn_x = text_x
+            btn_y = h - int(h * 0.12) - btn_h
+            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), fill=accent, radius=btn_h // 2)
+            draw.text((btn_x + 23, btn_y + 11), cta, fill=_contrast_color(accent), font=cta_font)
+
+        return img
+
+    def _render_hero_reflection(
+        self, template, w, h, headline, subheading, cta,
+        primary, secondary, accent, bg, text_color,
+        brand_name, logo_url, img_source,
+    ) -> Image.Image:
+        """Minimalist reflection layout for premium products."""
+        img = Image.new("RGB", (w, h), bg)
+        _draw_gradient_rect(img, (0, 0, w, h), _lighten(bg, 0.06), _darken(primary, 0.25))
+        draw = ImageDraw.Draw(img)
+
+        # Brand mark
+        y_cursor = int(h * 0.06)
+        if logo_url:
+            logo_img = _load_and_fit_image(logo_url, self.work_dir, (120, 50), "logo")
+            if logo_img:
+                img.paste(logo_img, (int(w * 0.06), y_cursor), logo_img if logo_img.mode == "RGBA" else None)
+        elif brand_name:
+            bf = _get_font(18, bold=False)
+            draw.text((int(w * 0.06), y_cursor), brand_name.upper(), fill=_darken(text_color, 0.2), font=bf)
+
+        # Product + reflection
+        if img_source:
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.5), int(h * 0.42)), "refl_prod")
+            if prod_img:
+                px = (w - prod_img.width) // 2
+                py = int(h * 0.18)
+                img.paste(prod_img, (px, py), prod_img)
+
+                reflection = prod_img.transpose(Image.FLIP_TOP_BOTTOM)
+                fade = Image.new("L", (1, reflection.height), color=255)
+                for y in range(reflection.height):
+                    fade.putpixel((0, y), max(0, 180 - int(180 * (y / max(1, reflection.height)))))
+                fade = fade.resize(reflection.size)
+                reflection.putalpha(fade)
+                ry = py + prod_img.height + 6
+                img.paste(reflection, (px, ry), reflection)
+
+        # Headline and CTA on lower area
+        hf = _get_font(min(40, w // 22), bold=True)
+        _draw_text_block(draw, headline, (int(w * 0.12), int(h * 0.62)), hf, _contrast_color(_darken(primary, 0.25)), int(w * 0.76), "center", 6)
+        if subheading:
+            sf = _get_font(min(20, w // 42), bold=False)
+            _draw_text_block(draw, subheading, (int(w * 0.16), int(h * 0.72)), sf, _lighten(text_color, 0.2), int(w * 0.68), "center", 4)
+        if cta:
+            cta_font = _get_font(min(22, w // 38), bold=True)
+            cw, ch = _text_size(draw, cta, cta_font)
+            btn_w = cw + 48
+            btn_h = ch + 20
+            btn_x = (w - btn_w) // 2
+            btn_y = h - int(h * 0.10) - btn_h
+            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), fill=accent, radius=btn_h // 2)
+            draw.text((btn_x + 24, btn_y + 10), cta, fill=_contrast_color(accent), font=cta_font)
+
+        return img
 
     # ── Benefit Grid ──────────────────────────────────────
 
@@ -844,7 +1156,7 @@ class StaticAdGenerator:
 
         # Product image on after side
         if img_source:
-            prod_img = _load_and_fit_image(
+            prod_img = _load_product_image(
                 img_source, self.work_dir,
                 (int(w * 0.4), int(split_h * 0.7)), "ba_prod",
             )
@@ -960,7 +1272,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "urg_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "urg_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = int(h * 0.52)
@@ -1109,7 +1421,7 @@ class StaticAdGenerator:
         # Product image centered (30% canvas)
         if img_source:
             target = int(min(w, h) * 0.35)
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (target, target), "min_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (target, target), "min_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = (h - prod_img.height) // 2 - int(h * 0.02)
@@ -1190,7 +1502,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.35), int(sol_h * 0.6)), "pas_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.35), int(sol_h * 0.6)), "pas_prod")
             if prod_img:
                 px = int(w * 0.06)
                 py = sol_y + (sol_h - prod_img.height) // 2
@@ -1282,7 +1594,7 @@ class StaticAdGenerator:
 
         # Left half: product/feature image
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (w // 2 - 20, int(h * 0.7)), "feat_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (w // 2 - 20, int(h * 0.7)), "feat_prod")
             if prod_img:
                 px = (w // 2 - prod_img.width) // 2
                 py = (h - prod_img.height) // 2
@@ -1434,7 +1746,7 @@ class StaticAdGenerator:
 
         # If we have an image, paste it into the first card
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (card_w - 20, card_h - 50), "ugc_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (card_w - 20, card_h - 50), "ugc_prod")
             if prod_img:
                 img.paste(prod_img, (margin + 10, card_area_y + 10), prod_img if prod_img.mode == "RGBA" else None)
 
@@ -1483,7 +1795,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "season_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "season_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = int(h * 0.35)

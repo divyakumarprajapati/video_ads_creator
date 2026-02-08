@@ -98,15 +98,21 @@ class CampaignService:
         # 2. Insert product rows
         product_models: List[CampaignProduct] = []
         for prod in payload.products:
+            product_image_urls = getattr(prod, "product_image_urls", None) or [prod.product_image_url]
+            image_urls = getattr(prod, "image_urls", None)
+            if image_urls is None and getattr(prod, "image_url", None):
+                image_urls = [prod.image_url]
             pm = CampaignProduct(
                 campaign_id=campaign.id,
                 product_name=prod.product_name,
                 product_image_url=prod.product_image_url,
+                product_image_urls=product_image_urls,
                 product_description=prod.product_description,
                 product_category=prod.product_category,
                 product_features=prod.product_features,
                 price=prod.price,
                 tags=prod.tags,
+                image_urls=image_urls,
             )
             self.db.add(pm)
             product_models.append(pm)

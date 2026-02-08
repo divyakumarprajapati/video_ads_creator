@@ -51,6 +51,51 @@ from app.services.strategy.template_selector import select_templates
 VARIANT_TYPES = [VariantType.VARIANT_A, VariantType.VARIANT_B, VariantType.VARIANT_C]
 
 
+def _dedupe_urls(urls: List[str]) -> List[str]:
+    """Preserve order while removing empty/duplicate URLs."""
+    seen = set()
+    cleaned: List[str] = []
+    for url in urls:
+        if not url:
+            continue
+        if url in seen:
+            continue
+        cleaned.append(url)
+        seen.add(url)
+    return cleaned
+
+
+def _normalize_url_list(primary: Optional[str], extras: Optional[List[str]]) -> List[str]:
+    urls: List[str] = []
+    if primary:
+        urls.append(primary)
+    if extras:
+        urls.extend(extras)
+    return _dedupe_urls(urls)
+
+
+def _resolve_static_image_pool(prod: ProductInput) -> tuple[List[str], bool]:
+    """
+    Resolve the image pool for static ads.
+
+    Returns (pool, is_override):
+      - pool: list of URLs to rotate across variants
+      - is_override: True when using explicit static ad hero images (image_url[s])
+    """
+    static_urls = _normalize_url_list(
+        getattr(prod, "image_url", None),
+        getattr(prod, "image_urls", None),
+    )
+    if static_urls:
+        return static_urls, True
+
+    product_urls = _normalize_url_list(
+        getattr(prod, "product_image_url", None),
+        getattr(prod, "product_image_urls", None),
+    )
+    return product_urls, False
+
+
 @dataclass
 class VideoVariantPlan:
     """Blueprint for one video file to be generated."""
@@ -238,15 +283,21 @@ async def generate_campaign_strategy(
                 pacing_seconds=pacing_secs,
             ))
 
+        image_pool, image_override = _resolve_static_image_pool(prod)
+        if image_pool:
+            static_variant_count = max(product_variants, len(image_pool))
+        else:
+            static_variant_count = product_variants
+
         # Select static ad templates for this product (full context)
         static_ad_templates = select_static_ad_templates(
             goal=goal,
-            message_angles=[angles[vi % len(angles)] for vi in range(product_variants)],
+            message_angles=[angles[vi % len(angles)] for vi in range(static_variant_count)],
             industry=brand.industry,
             product_category=prod.product_category,
             visual_style=visual_style.value,
-            has_product_image=bool(prod.product_image_url),
-            count=product_variants,
+            has_product_image=bool(getattr(prod, "product_image_url", None) or getattr(prod, "product_image_urls", None)),
+            count=static_variant_count,
             sentiment=market.sentiment.value,
             target_age_min=market.target_audience_age_min,
             target_age_max=market.target_audience_age_max,
@@ -262,7 +313,7 @@ async def generate_campaign_strategy(
         )
 
         ai_static_copies = None
-        if prod.product_image_url:  # Only try AI if we have product context
+        if getattr(prod, "product_image_url", None) or getattr(prod, "product_image_urls", None):
             ai_static_copies = await generate_static_ad_copy_ai(
                 product_name=prod.product_name,
                 product_description=prod.product_description,
@@ -280,14 +331,11 @@ async def generate_campaign_strategy(
                 target_age_min=market.target_audience_age_min,
                 target_age_max=market.target_audience_age_max,
                 target_gender=market.target_audience_gender,
-                num_variants=product_variants,
+                num_variants=static_variant_count,
             )
 
-        # Resolve the single image URL for static ads
-        product_image_url_for_static = getattr(prod, "image_url", None) or ""
-
         static_ad_variants: List[StaticAdVariantPlan] = []
-        for vi in range(product_variants):
+        for vi in range(static_variant_count):
             angle = angles[vi % len(angles)]
             sa_template = static_ad_templates[vi] if vi < len(static_ad_templates) else None
             tpl_category = sa_template.category if sa_template else "hero_product_showcase"
@@ -322,6 +370,16 @@ async def generate_campaign_strategy(
                 cta = sa_copy.cta_text
                 body_text = sa_copy.body_text
 
+            selected_image = image_pool[vi % len(image_pool)] if image_pool else ""
+            image_url = ""
+            if selected_image:
+                if image_override:
+                    image_url = selected_image
+                else:
+                    primary = getattr(prod, "product_image_url", "")
+                    if not primary or selected_image != primary:
+                        image_url = selected_image
+
             static_ad_variants.append(StaticAdVariantPlan(
                 variant_id=vi + 1,
                 variant_type=VARIANT_TYPES[vi % len(VARIANT_TYPES)].value,
@@ -332,7 +390,7 @@ async def generate_campaign_strategy(
                 body_text=body_text,
                 static_template_id=sa_template.template_id if sa_template else "",
                 static_template_name=sa_template.template_name if sa_template else "",
-                image_url=product_image_url_for_static,
+                image_url=image_url,
             ))
 
         product_plans.append(ProductCreativePlan(
@@ -410,7 +468,7 @@ async def generate_campaign_strategy(
     for vi in range(brand_variants):
         angle = angles[vi % len(angles)]
         sa_tpl = brand_static_templates[vi] if vi < len(brand_static_templates) else None
-        tpl_category = sa_tpl.category if sa_tpl else "social_proof_carousel"
+        tpl_category = sa_tpl.category if sa_tpl else "benefit_grid_triple"
 
         # Use AI brand copy if available, else smart deterministic
         if ai_brand_copies is not None and vi < len(ai_brand_copies):
@@ -458,7 +516,7 @@ async def generate_campaign_strategy(
     )
 
     total_videos = len(products) * product_variants + brand_variants
-    total_static_ads = len(products) * product_variants + brand_variants
+    total_static_ads = sum(len(p.static_ad_variants) for p in product_plans) + len(brand_static_ad_variants)
 
     return CampaignStrategy(
         visual_style=visual_style.value,
