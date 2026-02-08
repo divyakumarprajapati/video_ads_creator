@@ -359,6 +359,8 @@ def process_static_ads(
     static_ad_records: List[Dict],
     brand_identity: Dict,
     products: List[Dict],
+    product_composites: Optional[List[str]] = None,
+    product_data_map: Optional[Dict[str, Dict]] = None,
 ) -> Dict:
     """
     Generate static ad images for all static ad records in the campaign.
@@ -366,6 +368,10 @@ def process_static_ads(
     Each record references a template from template.json and contains
     messaging text.  The generator composes the final image using brand
     colors, product images, and the template layout.
+
+    When ``product_composites`` are passed (from video pipeline), these
+    pre-processed images (bg removed, brand bg applied, upscaled) are
+    used instead of raw product URLs, producing much cleaner static ads.
     """
     cid = campaign_id
     work = tmp_dir(prefix="static_ads_")
@@ -374,10 +380,18 @@ def process_static_ads(
         generator = StaticAdGenerator(work)
         qa = StaticAdValidator()
 
-        # Build product lookup
+        # Build product lookup and composite lookup
         product_map: Dict[str, Dict] = {}
         for prod in products:
             product_map[str(prod["id"])] = prod
+
+        # Map product_id → pre-processed composite path
+        composite_by_product: Dict[str, str] = {}
+        if product_composites and product_data_map:
+            for pid, pdata in (product_data_map or {}).items():
+                idx = pdata.get("product_index", 0)
+                if idx < len(product_composites):
+                    composite_by_product[pid] = product_composites[idx]
 
         brand_colors = brand_identity.get("colors", {})
         brand_name = brand_identity.get("brand_name", "")
@@ -394,7 +408,6 @@ def process_static_ads(
                 # Look up the template
                 template = get_template_by_id(template_id) if template_id else None
                 if not template:
-                    # Select a fallback template
                     from app.services.static_ad.template_registry import get_all_templates
                     all_tpls = get_all_templates()
                     template = all_tpls[0] if all_tpls else None
@@ -405,13 +418,20 @@ def process_static_ads(
                     results.append({"ad_id": ad_id, "status": "failed"})
                     continue
 
-                # Resolve product image
-                product_image_url = ""
+                # Resolve product image — prefer pre-processed composite
+                product_image_source = ""
                 image_url = sa.get("image_url", "")
                 product_id = sa.get("product_id")
-                if product_id and str(product_id) in product_map:
-                    prod = product_map[str(product_id)]
-                    product_image_url = prod.get("product_image_url", "")
+
+                if product_id and str(product_id) in composite_by_product:
+                    # Use the pipeline-processed composite (bg removed, brand bg)
+                    product_image_source = composite_by_product[str(product_id)]
+                elif product_id and str(product_id) in product_map:
+                    # Fall back to raw product URL
+                    product_image_source = product_map[str(product_id)].get("product_image_url", "")
+
+                # image_url from user takes priority for the hero shot
+                final_image = image_url if image_url else None
 
                 # Generate the static ad image
                 output_path = generator.generate(
@@ -423,8 +443,8 @@ def process_static_ads(
                     brand_colors=brand_colors,
                     brand_name=brand_name,
                     logo_url=logo_url,
-                    product_image_url=product_image_url,
-                    image_url=image_url if image_url else None,
+                    product_image_url=product_image_source,
+                    image_url=final_image,
                     width=1080,
                     height=1080,
                     variant_id=sa.get("variant_id", 1),
@@ -619,8 +639,12 @@ def run_campaign(campaign_id: str) -> Dict:
                     if sa.get("status") in ("queued", None)
                 ]
                 if queued_static:
+                    # Pass processed composites so static ads use clean
+                    # bg-removed product images on brand backgrounds
                     process_static_ads(
                         cid, queued_static, brand_identity, products,
+                        product_composites=product_composites,
+                        product_data_map=product_data_map,
                     )
             except Exception as exc:
                 logger.error("Static ads failed: %s", exc)

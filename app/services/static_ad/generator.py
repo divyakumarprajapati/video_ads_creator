@@ -232,6 +232,107 @@ def _load_and_fit_image(
         return None
 
 
+def _prepare_product_on_brand_bg(
+    path_or_url: str,
+    work_dir: str,
+    target_size: Tuple[int, int],
+    bg_color: Tuple[int, int, int],
+    secondary_color: Tuple[int, int, int],
+    name: str = "prod",
+) -> Optional[Image.Image]:
+    """
+    Load a product image, remove its background, and composite it onto
+    a brand-colored gradient canvas.  This is the key function that turns
+    a raw product photo into a brand-themed product shot.
+
+    Steps:
+    1. Download / open the image
+    2. Try background removal (rembg) → fall back to transparent crop
+    3. Create a gradient canvas from brand colors
+    4. Center the product on the canvas with padding
+    5. Return as clean RGBA for compositing into layouts
+    """
+    try:
+        # Step 1: Load the image
+        if path_or_url.startswith(("http://", "https://")):
+            dest = os.path.join(work_dir, f"_dl_{name}_raw.png")
+            if not os.path.exists(dest):
+                download_image(path_or_url, dest)
+            raw = Image.open(dest)
+        else:
+            raw = Image.open(path_or_url)
+
+        raw = raw.convert("RGBA")
+
+        # Step 2: Try background removal
+        nobg_path = os.path.join(work_dir, f"_nobg_{name}.png")
+        product_img = raw
+        if not os.path.exists(nobg_path):
+            try:
+                from rembg import remove as rembg_remove
+                product_img = rembg_remove(raw)
+                product_img.save(nobg_path)
+                logger.debug("rembg_success_static_ad", name=name)
+            except Exception:
+                # rembg not available — analyse if image is mostly dark/uniform
+                # and if so, try to extract the non-background portion
+                product_img = _auto_clean_product(raw)
+        else:
+            product_img = Image.open(nobg_path).convert("RGBA")
+
+        # Step 3: Create brand gradient canvas
+        tw, th = target_size
+        canvas = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        # Subtle radial gradient effect
+        bg_img = Image.new("RGB", (tw, th), bg_color)
+        _draw_gradient_rect(bg_img, (0, 0, tw, th), _lighten(bg_color, 0.1), secondary_color)
+        canvas = bg_img.convert("RGBA")
+
+        # Step 4: Scale product to fit with padding (70% of canvas)
+        pad_factor = 0.72
+        max_prod_w = int(tw * pad_factor)
+        max_prod_h = int(th * pad_factor)
+        product_img.thumbnail((max_prod_w, max_prod_h), Image.LANCZOS)
+
+        # Center on canvas
+        px = (tw - product_img.width) // 2
+        py = (th - product_img.height) // 2
+        canvas.paste(product_img, (px, py), product_img)
+
+        return canvas
+    except Exception as exc:
+        logger.warning("product_brand_bg_failed", error=str(exc), source=str(path_or_url)[:80])
+        return None
+
+
+def _auto_clean_product(img: Image.Image) -> Image.Image:
+    """
+    When rembg is not available, do a basic cleanup:
+    - If image has alpha channel with transparency, use it
+    - If image is very dark overall, brighten it
+    - Otherwise return as-is
+    """
+    # Check if image already has useful transparency
+    if img.mode == "RGBA":
+        alpha = img.getchannel("A")
+        # If there's meaningful transparency, the product is already cut out
+        alpha_extrema = alpha.getextrema()
+        if alpha_extrema[0] < 50:  # Some pixels are transparent
+            return img
+
+    # Check if image is too dark (placeholder-like)
+    import numpy as np
+    arr = np.array(img.convert("RGB"))
+    mean_brightness = arr.mean()
+    if mean_brightness < 30:
+        # Very dark image — likely a placeholder, make it brighter
+        from PIL import ImageEnhance
+        enhancer = ImageEnhance.Brightness(img.convert("RGBA"))
+        return enhancer.enhance(3.0)
+
+    return img.convert("RGBA")
+
+
 def _add_drop_shadow(
     img: Image.Image,
     offset: Tuple[int, int] = (8, 8),
@@ -404,6 +505,25 @@ class StaticAdGenerator:
         accent = _parse_color(brand_colors.get("accent", "") or brand_colors.get("primary", "#FF6B35"))
         bg_color = _parse_color(brand_colors.get("background", "#FFFFFF"))
         text_color = _parse_color(brand_colors.get("text", "#000000"))
+
+        # Pre-process: if img_source is a URL (not already a processed composite),
+        # create a brand-themed product composite with bg removal + brand bg
+        if img_source and not os.path.isfile(img_source):
+            # It's a URL - needs full processing
+            branded_composite = _prepare_product_on_brand_bg(
+                img_source, self.work_dir,
+                (width, height),
+                bg_color, secondary,
+                name=f"branded_v{variant_id}",
+            )
+            if branded_composite:
+                # Save the composite for use by renderers
+                comp_path = os.path.join(self.work_dir, f"_composite_v{variant_id}.png")
+                branded_composite.save(comp_path)
+                img_source = comp_path
+        elif img_source and os.path.isfile(img_source):
+            # It's already a local file (processed composite from pipeline)
+            pass
 
         # Route to category-specific renderer
         category = template.category
@@ -811,8 +931,10 @@ class StaticAdGenerator:
         """Urgency/countdown layout with bold offer."""
         img = Image.new("RGB", (w, h))
 
-        # Dark/dramatic gradient background
-        _draw_gradient_rect(img, (0, 0, w, h), (30, 0, 0), (80, 0, 0))
+        # Dark/dramatic gradient background — based on brand primary, darkened
+        dark_top = _darken(primary, 0.2)
+        dark_bot = _darken(primary, 0.4)
+        _draw_gradient_rect(img, (0, 0, w, h), dark_top, dark_bot)
         draw = ImageDraw.Draw(img)
 
         # Urgency badge
@@ -1036,24 +1158,28 @@ class StaticAdGenerator:
         img = Image.new("RGB", (w, h), bg)
         draw = ImageDraw.Draw(img)
 
-        # Problem zone (top 30%) - dark
+        # Problem zone (top 30%) - dark version of brand primary
         prob_h = int(h * 0.30)
-        draw.rectangle([(0, 0), (w, prob_h)], fill=(60, 30, 30))
+        prob_bg = _darken(primary, 0.25)
+        draw.rectangle([(0, 0), (w, prob_h)], fill=prob_bg)
         pf = _get_font(min(28, w // 32), bold=True)
-        _draw_text_block(draw, headline, (int(w * 0.06), int(prob_h * 0.3)), pf, (220, 80, 80), int(w * 0.88), "center")
+        _draw_text_block(draw, headline, (int(w * 0.06), int(prob_h * 0.3)), pf,
+                         _contrast_color(prob_bg), int(w * 0.88), "center")
 
-        # Agitation zone (middle 20%) - red accent
+        # Agitation zone (middle 20%) - darker brand accent
         agit_y = prob_h
         agit_h = int(h * 0.20)
-        draw.rectangle([(0, agit_y), (w, agit_y + agit_h)], fill=(100, 30, 30))
+        agit_bg = _darken(primary, 0.35)
+        draw.rectangle([(0, agit_y), (w, agit_y + agit_h)], fill=agit_bg)
 
         pain_points = [s.strip() for s in (body_text or subheading or "").split(".") if s.strip()]
         if not pain_points:
             pain_points = ["Wasted time", "Lost revenue", "Constant stress"]
         pf2 = _get_font(min(20, w // 44), bold=False)
+        agit_tc = _contrast_color(agit_bg)
         y = agit_y + 16
         for pp in pain_points[:3]:
-            draw.text((int(w * 0.08), y), f"\u2717  {pp}", fill=(255, 150, 150), font=pf2)
+            draw.text((int(w * 0.08), y), f"\u2717  {pp}", fill=_lighten(agit_tc, 0.3), font=pf2)
             y += 32
 
         # Solution zone (bottom 50%) - bright

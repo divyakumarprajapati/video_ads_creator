@@ -31,6 +31,10 @@ class ProductInput(BaseModel):
         None,
         description="Optional image URL for static ads (JPG/PNG/WebP). If provided, used as the hero image in static ad templates. Falls back to product_image_url.",
     )
+    image_urls: Optional[List[str]] = Field(
+        None,
+        description="Optional list of image URLs for static ads. Each image generates its own set of static ad variants. Falls back to image_url or product_image_url.",
+    )
 
     @field_validator("product_image_url")
     @classmethod
