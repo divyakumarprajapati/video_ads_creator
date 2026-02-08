@@ -283,6 +283,9 @@ async def generate_campaign_strategy(
                 num_variants=product_variants,
             )
 
+        # Resolve the single image URL for static ads
+        product_image_url_for_static = getattr(prod, "image_url", None) or ""
+
         static_ad_variants: List[StaticAdVariantPlan] = []
         for vi in range(product_variants):
             angle = angles[vi % len(angles)]
@@ -329,7 +332,7 @@ async def generate_campaign_strategy(
                 body_text=body_text,
                 static_template_id=sa_template.template_id if sa_template else "",
                 static_template_name=sa_template.template_name if sa_template else "",
-                image_url=getattr(prod, "image_url", None) or "",
+                image_url=product_image_url_for_static,
             ))
 
         product_plans.append(ProductCreativePlan(

@@ -790,13 +790,15 @@ You can provide a custom image for each product's static ads using the `image_ur
 | `product_image_url` | Video ads (background removal, compositing) + fallback for static ads | Yes |
 | `image_url` | Static ad hero image (lifestyle shots, marketing photos) | No |
 
-When `image_url` is provided:
-- Static ads use it as the primary image (great for lifestyle/marketing shots)
-- Video ads continue using `product_image_url` (optimized for product isolation)
+When `image_url` is provided, static ads use it as the primary image. When not provided, `product_image_url` is used.
 
-When `image_url` is **not** provided:
-- Static ads fall back to using `product_image_url`
-- Works perfectly with product-on-white-background shots
+**Image processing**: All product images are automatically processed before being placed into static ads:
+1. Background removal (rembg/U2-Net)
+2. Composited onto brand-colored gradient backgrounds using `brand_colors.background` and `brand_colors.secondary`
+3. Centered with proper padding (72% canvas coverage)
+4. Clean RGBA compositing into template layouts
+
+This means even raw product photos on messy backgrounds become clean, brand-themed ad visuals.
 
 ---
 
