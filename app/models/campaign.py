@@ -35,6 +35,8 @@ from app.core.enums import (
     MessageAngle,
     Platform,
     ProductGenerationStatus,
+    StaticAdStatus,
+    StaticAdType,
     VariantType,
     VideoStatus,
     VideoType,
@@ -125,6 +127,9 @@ class Campaign(Base):
         back_populates="campaign", cascade="all, delete-orphan", lazy="selectin"
     )
     videos: Mapped[list["CampaignVideo"]] = relationship(
+        back_populates="campaign", cascade="all, delete-orphan", lazy="selectin"
+    )
+    static_ads: Mapped[list["CampaignStaticAd"]] = relationship(
         back_populates="campaign", cascade="all, delete-orphan", lazy="selectin"
     )
 
@@ -295,6 +300,81 @@ class CampaignPlatformExport(Base):
 # ────────────────────────────────────────────────────────────
 #  Video Template
 # ────────────────────────────────────────────────────────────
+
+# ────────────────────────────────────────────────────────────
+#  Campaign Static Ad
+# ────────────────────────────────────────────────────────────
+
+class CampaignStaticAd(Base):
+    __tablename__ = "campaign_static_ads"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=_new_uuid
+    )
+    campaign_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False
+    )
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("campaign_products.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    ad_type: Mapped[StaticAdType] = mapped_column(
+        _string_enum(StaticAdType, name="static_ad_type"), nullable=False
+    )
+    variant_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    variant_type: Mapped[VariantType] = mapped_column(
+        _string_enum(VariantType, name="static_ad_variant_type"), nullable=False
+    )
+    message_angle: Mapped[MessageAngle] = mapped_column(
+        _string_enum(MessageAngle, name="static_ad_message_angle"), nullable=False
+    )
+
+    # Template reference
+    static_template_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    static_template_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
+
+    # Messaging
+    headline: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    subheading: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    cta_text: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    body_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Image reference (user-provided or product image)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Output artefacts
+    status: Mapped[StaticAdStatus] = mapped_column(
+        _string_enum(StaticAdStatus, name="static_ad_status"),
+        default=StaticAdStatus.QUEUED,
+        index=True,
+    )
+    file_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    thumbnail_path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_size_mb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    width: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    height: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Full template spec used for generation
+    template_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    extra_metadata: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )
+
+    campaign: Mapped["Campaign"] = relationship(back_populates="static_ads")
+    product: Mapped["CampaignProduct | None"] = relationship()
+
+    __table_args__ = (
+        Index("ix_campaign_static_ads_campaign", "campaign_id"),
+        Index("ix_campaign_static_ads_product", "product_id"),
+        Index("ix_campaign_static_ads_status", "status"),
+    )
+
 
 class VideoTemplate(Base):
     __tablename__ = "video_templates"

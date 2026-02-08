@@ -14,6 +14,8 @@ from app.core.enums import (
     CampaignGoal,
     CampaignStatus,
     Platform,
+    StaticAdStatus,
+    StaticAdType,
     VideoStatus,
     VideoType,
 )
@@ -72,6 +74,7 @@ class CampaignOut(BaseModel):
     error_message: Optional[str] = None
     total_products: int = 0
     total_videos: int = 0
+    total_static_ads: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -101,6 +104,10 @@ class CampaignStatusOut(BaseModel):
     completed_videos: int
     failed_videos: int
     videos: List[VideoStatusItem]
+    total_static_ads: int = 0
+    completed_static_ads: int = 0
+    failed_static_ads: int = 0
+    static_ads: List[StaticAdStatusItem] = []
 
 
 # ── Response: campaign results (full artefact links) ────────
@@ -141,6 +148,46 @@ class VideoResultOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Response: static ad results ─────────────────────────────
+
+class StaticAdStatusItem(BaseModel):
+    ad_id: uuid.UUID
+    ad_type: StaticAdType
+    product_name: Optional[str] = None
+    variant_id: int
+    status: StaticAdStatus
+    quality_score: Optional[float] = None
+
+    model_config = {"from_attributes": True}
+
+
+class StaticAdResultOut(BaseModel):
+    ad_id: uuid.UUID
+    ad_type: StaticAdType
+    product_id: Optional[uuid.UUID] = None
+    product_name: Optional[str] = None
+    variant_id: int
+    variant_type: str
+    message_angle: str
+    headline: Optional[str] = None
+    subheading: Optional[str] = None
+    cta_text: Optional[str] = None
+    body_text: Optional[str] = None
+    image_url: Optional[str] = None
+    static_template_id: Optional[str] = None
+    static_template_name: Optional[str] = None
+    status: StaticAdStatus
+    quality_score: Optional[float] = None
+    file_path: Optional[str] = None
+    thumbnail_path: Optional[str] = None
+    file_size_mb: Optional[float] = None
+    width: Optional[int] = None
+    height: Optional[int] = None
+    metadata: Optional[dict] = None
+
+    model_config = {"from_attributes": True}
+
+
 class CampaignResultsOut(BaseModel):
     campaign_id: uuid.UUID
     campaign_name: str
@@ -148,6 +195,7 @@ class CampaignResultsOut(BaseModel):
     overall_progress: float
     products: List[ProductOut]
     videos: List[VideoResultOut]
+    static_ads: List[StaticAdResultOut] = []
     download_url: Optional[str] = None
     summary: Dict
 

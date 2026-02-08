@@ -27,6 +27,10 @@ class ProductInput(BaseModel):
         None,
         description='E.g. {"is_new": true, "is_bestseller": false}',
     )
+    image_url: Optional[str] = Field(
+        None,
+        description="Optional image URL for static ads (JPG/PNG/WebP). If provided, used as the hero image in static ad templates. Falls back to product_image_url.",
+    )
 
     @field_validator("product_image_url")
     @classmethod
