@@ -1,0 +1,1647 @@
+{
+  "ad_templates": [
+    {
+      "template_id": "hero_product_showcase_01",
+      "template_name": "Classic Hero Product - Right Aligned",
+      "description": "Full-bleed product image occupying 60% of canvas (right side), brand logo top-left corner, bold headline mid-left (40-60pt font), 2-3 line benefit-focused subheading below, prominent CTA button bottom-left with contrasting color, subtle gradient background on text side",
+      "visual_structure": {
+        "product_placement": "Right 60% - high-res product photo with soft shadow",
+        "headline_placement": "Left side, vertically centered, bold sans-serif",
+        "subheading_placement": "Below headline, lighter weight font, 60% opacity",
+        "cta_placement": "Bottom-left, rounded button with 16px padding",
+        "logo_placement": "Top-left corner, 80-120px width",
+        "background": "Split design - solid/gradient left, white/transparent right"
+      },
+      "best_for": [
+        "Physical product launches (electronics, gadgets, appliances)",
+        "Premium consumer goods (watches, jewelry, accessories)",
+        "Fashion items (shoes, bags, sunglasses)",
+        "Beauty products (skincare, makeup, fragrances)",
+        "Tech accessories (headphones, cases, chargers)"
+      ],
+      "color_psychology": "Use brand colors for CTA, neutral backgrounds to emphasize product",
+      "effectiveness_factors": "High product visibility, clear value proposition, strong call-to-action"
+    },
+    {
+      "template_id": "hero_product_showcase_02",
+      "template_name": "Hero Product - Center Stage",
+      "description": "Product centered on canvas (40% size), radial gradient background emanating from product, headline arched above product, feature badges surrounding product in orbital pattern, price/offer bottom center, logo top center, CTA below price",
+      "visual_structure": {
+        "product_placement": "Perfect center, 40% of canvas, professional isolation",
+        "headline_placement": "Arched above product, following curve, 36-48pt",
+        "feature_badges": "3-4 small circular badges orbiting product with icons",
+        "background": "Radial gradient from center, drawing eye to product",
+        "price_display": "Bottom center, large bold with offer details",
+        "logo_placement": "Top center, moderate size",
+        "cta": "Below price, prominent button"
+      },
+      "best_for": [
+        "E-commerce hero banners",
+        "Product launch announcements",
+        "Premium electronics",
+        "Flagship product promotions",
+        "Award-winning products"
+      ],
+      "color_psychology": "Dramatic gradients, spotlight effect, high contrast",
+      "effectiveness_factors": "Central focus, premium positioning, immediate feature recognition"
+    },
+    {
+      "template_id": "hero_product_showcase_03",
+      "template_name": "Hero Product - Diagonal Split",
+      "description": "Diagonal split from top-left to bottom-right, product on lower-right triangle (55%), text content on upper-left triangle (45%), dynamic angle creates energy, brand logo follows diagonal line, CTA on text side aligned with diagonal",
+      "visual_structure": {
+        "split_angle": "Diagonal from top-left to bottom-right at 30-35 degrees",
+        "product_placement": "Lower-right triangle, product angled to match diagonal",
+        "text_zone": "Upper-left triangle, headline and subtext",
+        "logo_alignment": "Following diagonal line, creates visual flow",
+        "cta": "On text side, near diagonal intersection",
+        "background": "Contrasting colors each side of diagonal"
+      },
+      "best_for": [
+        "Sports and athletic products",
+        "Energy drinks and active lifestyle",
+        "Tech gadgets with dynamic appeal",
+        "Youth-oriented fashion",
+        "Automotive accessories"
+      ],
+      "color_psychology": "High-energy colors, bold contrasts, movement implied",
+      "effectiveness_factors": "Dynamic composition, modern aesthetic, visual energy"
+    },
+    {
+      "template_id": "hero_product_showcase_04",
+      "template_name": "Hero Product - Floating Elements",
+      "description": "Main product center-left (35%), supporting products or components floating around in 3D space with shadows, deconstructed view showing versatility, headline top-right, feature list right side, CTA bottom-right, white/light background",
+      "visual_structure": {
+        "main_product": "Center-left, 35% size, primary focus",
+        "floating_elements": "4-6 related items floating with realistic shadows",
+        "3d_effect": "Depth created through shadow and perspective",
+        "headline": "Top-right quadrant, large and bold",
+        "feature_list": "Right side, 4-5 concise bullets",
+        "cta": "Bottom-right, contrasting button",
+        "background": "Clean white or subtle gradient"
+      },
+      "best_for": [
+        "Multi-component products (skincare sets, toolkits)",
+        "Modular products showing versatility",
+        "Tech products with accessories",
+        "Food products showing variety",
+        "Subscription boxes previewing contents"
+      ],
+      "color_psychology": "Clean, professional whites with product colors popping",
+      "effectiveness_factors": "Comprehensive view, versatility showcase, premium aesthetic"
+    },
+    {
+      "template_id": "hero_product_showcase_05",
+      "template_name": "Hero Product - Mirror/Reflection",
+      "description": "Product top half of canvas with perfect mirror reflection below creating symmetry, headline overlaid on reflection (semi-transparent), minimalist design, logo top corner, subtle CTA bottom, premium sophisticated feel",
+      "visual_structure": {
+        "product_placement": "Top 50%, high-quality isolated shot",
+        "reflection": "Bottom 50%, perfect mirror with slight fade",
+        "headline_overlay": "On reflection area, 40-50pt, semi-transparent backdrop",
+        "symmetry_line": "Horizontal center line, subtle or invisible",
+        "logo": "Top corner, refined and small",
+        "cta": "Bottom, minimal design, text link or subtle button",
+        "background": "Solid color or subtle gradient"
+      },
+      "best_for": [
+        "Luxury products (perfumes, jewelry, watches)",
+        "Premium cosmetics",
+        "High-end electronics",
+        "Designer fashion items",
+        "Luxury automotive"
+      ],
+      "color_psychology": "Sophisticated blacks, whites, metallics, minimal palette",
+      "effectiveness_factors": "Elegance through simplicity, premium positioning, artistic appeal"
+    },
+    {
+      "template_id": "benefit_grid_triple_01",
+      "template_name": "Triple Benefit Grid - Vertical",
+      "description": "Header section (20% height) with brand and main headline, three equal vertical columns below (80% height), each column contains icon/illustration top, benefit headline mid, short description text, unified CTA bar at bottom spanning all columns",
+      "visual_structure": {
+        "header_zone": "Top 20% - brand logo left, main headline center/right",
+        "column_layout": "Three equal 33.3% width columns with 2% gutters",
+        "icon_placement": "Top of each column, 80-100px, single color or gradient",
+        "benefit_headline": "Below icon, 24-32pt bold, 2-4 words max",
+        "description_text": "Below headline, 14-16pt, 2-3 lines, left-aligned",
+        "cta_bar": "Bottom strip, full width, contrasting background"
+      },
+      "best_for": [
+        "SaaS platform features",
+        "Service offerings (consulting, agencies)",
+        "Subscription models",
+        "Insurance products",
+        "Financial services"
+      ],
+      "color_psychology": "Each column can have subtle color differentiation",
+      "effectiveness_factors": "Clear value communication, scannable format, multiple entry points"
+    },
+    {
+      "template_id": "benefit_grid_triple_02",
+      "template_name": "Triple Benefit Grid - Horizontal Steps",
+      "description": "Three horizontal rows showing progressive steps/benefits, each row 33% height, left side has step number in large circle, center has benefit headline and description, right has supporting illustration, arrow connectors between rows, CTA at bottom",
+      "visual_structure": {
+        "row_layout": "Three equal horizontal rows, 30% each, 10% spacing",
+        "step_circles": "Left side of each row, 100-120px circles with large numbers",
+        "content_zone": "Center 60%, headline and description",
+        "illustration": "Right 30%, simple icon or graphic",
+        "connectors": "Vertical arrows or dotted lines between rows",
+        "cta": "Bottom center, after final step",
+        "background": "Alternating subtle shades for each row"
+      },
+      "best_for": [
+        "Process-oriented services",
+        "Step-by-step programs",
+        "Onboarding flows",
+        "Educational sequences",
+        "Service delivery explanations"
+      ],
+      "color_psychology": "Progressive color intensity or sequential brand colors",
+      "effectiveness_factors": "Logical flow, process clarity, guided journey"
+    },
+    {
+      "template_id": "benefit_grid_quad_01",
+      "template_name": "Quad Benefit Grid - 2x2",
+      "description": "Four equal quadrants in 2x2 grid, each with icon top, benefit headline, short description, subtle borders separating quadrants, main headline spanning top above grid, CTA bottom center below grid, balanced symmetrical design",
+      "visual_structure": {
+        "grid_layout": "2x2 equal quadrants, 48% width each, 4% gutters",
+        "main_headline": "Above grid, spanning full width, 36-48pt",
+        "quadrant_structure": "Icon (60-80px) top, headline (20-24pt), description (3-4 lines)",
+        "borders": "Subtle 1px lines separating quadrants",
+        "icon_style": "Consistent style across all four, branded colors",
+        "cta": "Bottom center, prominent button",
+        "background": "White or light with subtle quadrant differentiation"
+      },
+      "best_for": [
+        "Comprehensive platform features",
+        "Four-pillar service offerings",
+        "Product benefit categories",
+        "Value proposition breakdown",
+        "Multi-benefit solutions"
+      ],
+      "color_psychology": "Unified color palette with subtle variation per quadrant",
+      "effectiveness_factors": "Comprehensive coverage, balanced presentation, easy scanning"
+    },
+    {
+      "template_id": "benefit_grid_quad_02",
+      "template_name": "Quad Benefit Grid - Diamond Layout",
+      "description": "Four benefit blocks arranged in diamond/rhombus pattern, center has product image or logo, each benefit points toward center, connecting lines from benefits to center, headline top, CTA bottom, creates focal point on product",
+      "visual_structure": {
+        "diamond_points": "Four benefit blocks at cardinal points (top, right, bottom, left)",
+        "center_focal": "Product image or logo in center, 25% of canvas",
+        "benefit_blocks": "Each contains icon, headline, short text",
+        "connecting_lines": "Subtle lines or arrows from each benefit to center",
+        "headline": "Top, arched or straight, 32-40pt",
+        "cta": "Bottom center, below diamond formation",
+        "background": "Gradient or solid with center emphasis"
+      },
+      "best_for": [
+        "Product-centric benefit messaging",
+        "All-in-one solutions",
+        "Hub products with multiple advantages",
+        "Platform ecosystems",
+        "Comprehensive service suites"
+      ],
+      "color_psychology": "Center highlighted, radiating benefits in brand colors",
+      "effectiveness_factors": "Product centrality, benefit connection visualization, unique layout"
+    },
+    {
+      "template_id": "benefit_grid_six_pack",
+      "template_name": "Six Benefit Grid - 3x2",
+      "description": "Six benefits in 3 columns x 2 rows, compact icons (50-60px), concise headlines (2-3 words), single-line descriptions, tight spacing for information density, header section with main value prop, footer with CTA, efficient space use",
+      "visual_structure": {
+        "grid_layout": "3 columns x 2 rows, equal sizing, minimal gutters",
+        "header_section": "Top 15%, main headline and subheading",
+        "benefit_cells": "Each: icon top, bold headline, one-line description",
+        "icon_size": "50-60px, uniform style, single or dual color",
+        "text_hierarchy": "Headlines 18-20pt, descriptions 12-14pt",
+        "footer_cta": "Bottom 15%, prominent button with supporting text",
+        "spacing": "Tight but breathable, maximizing content"
+      },
+      "best_for": [
+        "Feature-rich software platforms",
+        "Comprehensive service packages",
+        "All-inclusive memberships",
+        "Multi-benefit insurance plans",
+        "Full-service agencies"
+      ],
+      "color_psychology": "Organized, professional, slight color coding per category",
+      "effectiveness_factors": "Information density, comprehensive view, thorough value communication"
+    },
+    {
+      "template_id": "before_after_split_01",
+      "template_name": "Before/After - Vertical Split Classic",
+      "description": "Vertical split down center, 'BEFORE' label top-left, 'AFTER' label top-right, problem scenario left side with muted/grayscale treatment, solution scenario right side with vibrant colors, central divider line with brand logo medallion, headline above split, CTA below split",
+      "visual_structure": {
+        "split_ratio": "50/50 vertical division",
+        "before_side": "Left - problem visual, desaturated or dark overlay",
+        "after_side": "Right - solution visual, bright and aspirational",
+        "labels": "Top corners, small caps, 12-14pt",
+        "divider": "2-3px vertical line with logo circle overlay at midpoint",
+        "headline": "Top center, spanning both sides",
+        "cta": "Bottom center, prominent button"
+      },
+      "best_for": [
+        "Weight loss and fitness programs",
+        "Home improvement services",
+        "Skincare and beauty treatments",
+        "Dental services",
+        "Hair care products"
+      ],
+      "color_psychology": "Muted tones left, vibrant aspirational colors right",
+      "effectiveness_factors": "Dramatic visual contrast, emotional transformation, clear problem-solution"
+    },
+    {
+      "template_id": "before_after_split_02",
+      "template_name": "Before/After - Horizontal Timeline",
+      "description": "Horizontal before/after with timeline element, 'BEFORE' image top 40%, timeline bar middle 10% with time markers, 'AFTER' image bottom 40%, progress indicators on timeline (Day 1, Week 2, Month 3), headline above, results summary between timeline and after image",
+      "visual_structure": {
+        "before_image": "Top 40%, full width, labeled prominently",
+        "timeline_bar": "Middle 10%, horizontal bar with date/time markers",
+        "progress_points": "3-4 circular markers on timeline showing journey",
+        "after_image": "Bottom 40%, full width, vibrant and successful",
+        "results_text": "Between timeline and after image, key metrics",
+        "headline": "Top, before 'before' image",
+        "cta": "Bottom, 'Start Your Transformation'"
+      },
+      "best_for": [
+        "Time-based transformations (fitness, skincare)",
+        "Project completion services (construction, landscaping)",
+        "Progress-oriented programs",
+        "Treatment results with duration",
+        "Before/after with proof timeline"
+      ],
+      "color_psychology": "Gray/muted for before, progressive color for timeline, vibrant for after",
+      "effectiveness_factors": "Timeline credibility, realistic expectations, journey visualization"
+    },
+    {
+      "template_id": "before_after_split_03",
+      "template_name": "Before/After - Slider Comparison",
+      "description": "Single image area with interactive slider aesthetic in center, before image on left portion, after image on right portion, slider handle in middle with left/right arrows, headline top emphasizing comparison, metric badges showing improvement percentages, CTA bottom",
+      "visual_structure": {
+        "image_area": "70% of canvas, single rectangular area",
+        "before_portion": "Left side of image, can be 30-70% visible",
+        "after_portion": "Right side of image, complementing before",
+        "slider_handle": "Vertical bar with circular handle and arrows",
+        "labels": "Small 'BEFORE' left, 'AFTER' right, on images",
+        "metric_badges": "2-3 circular badges showing % improvement",
+        "headline": "Top, 'See the Difference' messaging",
+        "cta": "Bottom, 'Try It Yourself'"
+      },
+      "best_for": [
+        "Photo editing software",
+        "Image enhancement services",
+        "Filter and lens products",
+        "Restoration services",
+        "Cleaning services (carpet, exterior)",
+        "Renovation services"
+      ],
+      "color_psychology": "Realistic colors showing actual transformation",
+      "effectiveness_factors": "Interactive visual metaphor, precise comparison, engaging format"
+    },
+    {
+      "template_id": "before_after_triptych",
+      "template_name": "Before/During/After - Three Panel",
+      "description": "Three equal vertical panels showing transformation journey, left panel 'BEFORE' (problem state), center panel 'DURING/PROCESS' (solution application), right panel 'AFTER' (result), arrows between panels, timeline labels, comprehensive story arc",
+      "visual_structure": {
+        "panel_layout": "Three equal 32% width panels, 2% gutters",
+        "panel_labels": "Top of each: BEFORE, PROCESS, AFTER",
+        "panel_images": "Matching composition showing progression",
+        "arrows": "Between panels showing directional flow",
+        "timeline_markers": "Below each panel with time indicators",
+        "headline": "Above panels, spanning width",
+        "cta": "Below panels, 'Begin Your Journey'"
+      },
+      "best_for": [
+        "Complex transformation services",
+        "Multi-step treatment programs",
+        "Construction and renovation projects",
+        "Manufacturing and production processes",
+        "Comprehensive wellness programs",
+        "Educational progression programs"
+      ],
+      "color_psychology": "Progressive lightening or color saturation increase left to right",
+      "effectiveness_factors": "Complete story, process transparency, realistic journey mapping"
+    },
+    {
+      "template_id": "testimonial_trust_01",
+      "template_name": "Testimonial Trust Builder - Classic",
+      "description": "Large quote in center (40% of space), customer photo circular crop top-left or top-center (120-150px), customer name and title below photo, 5-star rating graphic prominent, product/service image subtle background (20% opacity), brand logo top corner, CTA bottom-right",
+      "visual_structure": {
+        "quote_placement": "Center, 28-36pt serif or elegant sans-serif, quotation marks oversized",
+        "customer_photo": "Circular, 120-150px diameter, professional headshot",
+        "attribution": "Below quote, 16-18pt name, 12-14pt title/company",
+        "rating_graphic": "5-star visual, gold/brand color, near customer info",
+        "background_image": "Product/service visual at 15-25% opacity, full bleed",
+        "logo": "Top-right corner, moderate size",
+        "cta": "Bottom, contrasting color button"
+      },
+      "best_for": [
+        "High-ticket B2B services",
+        "Professional services",
+        "Luxury products",
+        "Online courses",
+        "Premium e-commerce"
+      ],
+      "color_psychology": "Trust-building blues, professional grays, gold accents",
+      "effectiveness_factors": "Social proof, credibility, emotional connection"
+    },
+    {
+      "template_id": "testimonial_trust_02",
+      "template_name": "Testimonial Video Frame",
+      "description": "Video player aesthetic with play button overlay, customer testimonial screenshot from video, quote overlaid on bottom third with subtitle styling, timestamp visible, 'Watch Full Story' CTA, verified badge or check mark, view count or social metrics",
+      "visual_structure": {
+        "video_frame": "16:9 ratio occupying 60% of canvas, realistic video player UI",
+        "play_button": "Center, large circular play icon, semi-transparent",
+        "customer_frame": "Customer mid-speech screenshot, authentic moment",
+        "quote_subtitle": "Bottom third, white text on dark semi-transparent bar",
+        "timestamp": "Bottom-left of video, '1:32' format",
+        "metrics": "Top-right, '12K views' or '500 shares'",
+        "cta": "Below video, 'Watch Their Story'",
+        "verified_badge": "Corner badge showing authenticity"
+      },
+      "best_for": [
+        "Video-first marketing campaigns",
+        "Authentic story-driven brands",
+        "Course and coaching programs",
+        "Transformation-based services",
+        "Community-driven platforms",
+        "High-engagement products"
+      ],
+      "color_psychology": "Video UI blacks/darks, authentic skin tones, minimal color overlay",
+      "effectiveness_factors": "Video credibility, authentic moments, multimedia trust signals"
+    },
+    {
+      "template_id": "testimonial_trust_03",
+      "template_name": "Testimonial Carousel Preview",
+      "description": "Three testimonial cards in overlapping carousel style, front card fully visible (60% opacity behind), customer photo top, short quote, name, rating, left/right navigation dots, '1 of 47 reviews' counter, headline 'What Our Customers Say', CTA 'Read All Reviews'",
+      "visual_structure": {
+        "card_stack": "Three cards, front card full opacity, others stacked behind at angles",
+        "front_card": "Customer photo top, quote (3-4 lines), name, 5-star rating",
+        "card_size": "300-350px width, 400-450px height",
+        "navigation": "Dots below cards showing position in sequence",
+        "review_counter": "Top, 'Review 1 of 47' or similar",
+        "headline": "Top of canvas, 'What Customers Say'",
+        "cta": "Bottom, 'See All Reviews' linking to review page"
+      },
+      "best_for": [
+        "E-commerce with many reviews",
+        "Service businesses with testimonial volume",
+        "Apps with user reviews",
+        "Platforms with rating systems",
+        "Products with strong review culture"
+      ],
+      "color_psychology": "Clean whites for cards, brand accents, gold for stars",
+      "effectiveness_factors": "Volume indication, variety preview, social proof multiplication"
+    },
+    {
+      "template_id": "testimonial_trust_04",
+      "template_name": "Testimonial Split Screen Duo",
+      "description": "Two testimonials side-by-side, each takes 50% width, different customer types/demographics shown, parallel structure (photo, quote, name, context), 'Trusted by [Different Audiences]' headline, demonstrates broad appeal, unified CTA at bottom",
+      "visual_structure": {
+        "split_layout": "50/50 vertical split",
+        "left_testimonial": "Customer A photo, quote, attribution, context",
+        "right_testimonial": "Customer B photo, quote, attribution, context",
+        "parallel_structure": "Identical layout both sides for easy comparison",
+        "headline": "Top, spanning both, 'Loved by [Audience A] and [Audience B]'",
+        "diversity": "Contrasting customer types showing range",
+        "cta": "Bottom center, spanning both panels"
+      },
+      "best_for": [
+        "Products serving multiple demographics",
+        "B2B and B2C hybrid offerings",
+        "Multi-use case products",
+        "Broad market appeal services",
+        "Platform businesses with diverse users"
+      ],
+      "color_psychology": "Balanced, no side dominance, equal color treatment",
+      "effectiveness_factors": "Broad appeal demonstration, inclusivity, market range"
+    },
+    {
+      "template_id": "testimonial_trust_05",
+      "template_name": "Testimonial Statistics Hybrid",
+      "description": "Large testimonial quote center-left (50%), statistics panel right side (50%) showing aggregate data, customer photo bottom-left, numbers like '4.9/5.0 from 2,847 reviews', trust badges, combines qualitative and quantitative proof, dual-mode credibility",
+      "visual_structure": {
+        "quote_section": "Left 50%, large quote with quotation marks",
+        "customer_photo": "Bottom-left, circular, 100-120px",
+        "attribution": "Below or beside photo",
+        "stats_panel": "Right 50%, dark or branded background",
+        "key_metrics": "Large numbers: rating, review count, satisfaction %",
+        "trust_badges": "Awards, certifications at bottom of stats panel",
+        "cta": "Bottom center, spanning both sections"
+      },
+      "best_for": [
+        "Data-driven service marketing",
+        "Platforms with strong metrics",
+        "Products with measurable results",
+        "Services with high satisfaction scores",
+        "Review-heavy businesses"
+      ],
+      "color_psychology": "Professional split between human (warm) and data (cool)",
+      "effectiveness_factors": "Dual proof types, emotional + rational, comprehensive credibility"
+    },
+    {
+      "template_id": "urgency_countdown_01",
+      "template_name": "Limited Time Offer - Classic Countdown",
+      "description": "Bold discount percentage or offer top-center (massive 72-96pt font), countdown timer mid-center (digital clock aesthetic), product image bottom half, urgent color scheme (red/orange accents), 'LIMITED TIME' badge top corner, strikethrough original price, new price prominent, CTA button with action verb",
+      "visual_structure": {
+        "offer_headline": "Top 30%, massive bold numbers for discount",
+        "timer_element": "Center, digital countdown format (00:00:00)",
+        "product_visual": "Bottom 40%, clear product shot",
+        "urgency_badges": "Corner ribbons 'LIMITED', 'ENDS SOON'",
+        "pricing": "Old price crossed out, new price 2x size",
+        "cta": "Bottom center, high contrast, 'CLAIM NOW'"
+      },
+      "best_for": [
+        "Flash sales",
+        "Seasonal promotions",
+        "E-commerce clearance",
+        "Course enrollment deadlines",
+        "Event ticket sales"
+      ],
+      "color_psychology": "Red/orange for urgency, yellow highlights, high contrast",
+      "effectiveness_factors": "FOMO activation, clear deadline, immediate action motivation"
+    },
+    {
+      "template_id": "urgency_countdown_02",
+      "template_name": "Stock Scarcity Alert",
+      "description": "Product image center-left, 'LOW STOCK' or 'ONLY X LEFT' prominent badge top-right in red, inventory bar showing depletion (80-90% filled red bar), headline emphasizing scarcity, bullet points of product benefits, CTA with urgency text 'Order Before They're Gone', date or time remaining",
+      "visual_structure": {
+        "product_image": "Center-left, 40% of canvas",
+        "scarcity_badge": "Top-right, red alert badge, 'ONLY 3 LEFT'",
+        "inventory_bar": "Below badge, horizontal bar mostly filled",
+        "headline": "Top, 'Almost Sold Out' or similar",
+        "benefit_bullets": "Right side, 3-4 quick points",
+        "urgency_text": "Near CTA, 'Stock running low'",
+        "cta": "Bottom-right, 'Secure Yours Now'"
+      },
+      "best_for": [
+        "Limited inventory drops",
+        "Collectible items",
+        "Popular products with supply issues",
+        "Seasonal items",
+        "Pre-order campaigns",
+        "Limited edition releases"
+      ],
+      "color_psychology": "Red for alerts, orange for warnings, product colors natural",
+      "effectiveness_factors": "Scarcity principle, inventory transparency, urgency creation"
+    },
+    {
+      "template_id": "urgency_countdown_03",
+      "template_name": "Early Bird Deadline",
+      "description": "Split design: left side shows early bird price with 'SAVE X%' badge, right side shows regular price (grayed out/locked), countdown timer prominent center, 'Early Bird Expires In' headline, visual progression from 'NOW' (green) to 'LATER' (red), CTA emphasizes timing benefit",
+      "visual_structure": {
+        "left_panel": "Early bird offer, green/unlocked aesthetic, current price",
+        "right_panel": "Standard price, grayed out, padlock icon",
+        "timer_center": "Large countdown between panels",
+        "headline": "Top, 'Early Bird Pricing Ends Soon'",
+        "savings_badge": "Prominent on early bird side, % or $ amount",
+        "visual_progression": "Green (available now) → Red (future higher price)",
+        "cta": "Left side, 'Lock In Early Bird Price'"
+      },
+      "best_for": [
+        "Course and event early registration",
+        "Product pre-orders",
+        "Conference tickets",
+        "Subscription founding member offers",
+        "Crowdfunding campaigns",
+        "Launch period pricing"
+      ],
+      "color_psychology": "Green for available/savings, red for deadline/loss, clear contrast",
+      "effectiveness_factors": "Loss aversion, price anchoring, timing benefit clarity"
+    },
+    {
+      "template_id": "urgency_countdown_04",
+      "template_name": "Hourly Flash Deal Rotator",
+      "description": "Top bar showing current hour's deal, countdown to next hour, 'CURRENT DEAL' left side with product and discount, 'NEXT UP' preview right side (blurred or silhouette), hourly schedule timeline bottom, creates recurring engagement, 'Check Back Every Hour' messaging",
+      "visual_structure": {
+        "current_deal": "Left 60%, product image, discount %, clear details",
+        "hour_timer": "Prominent countdown to next hour change",
+        "next_preview": "Right 30%, teaser of upcoming deal (partially obscured)",
+        "hourly_timeline": "Bottom, showing 24-hour deal rotation",
+        "headline": "Top, 'Flash Deal: This Hour Only'",
+        "urgency_element": "Ticking clock, minutes remaining",
+        "cta": "On current deal, 'Grab This Deal'"
+      },
+      "best_for": [
+        "E-commerce flash sale events",
+        "Daily deal platforms",
+        "App-based limited offers",
+        "Gamified shopping experiences",
+        "Entertainment and event flash sales"
+      ],
+      "color_psychology": "Time-based color coding, active vs. upcoming differentiation",
+      "effectiveness_factors": "Recurring engagement, anticipation building, habitual checking"
+    },
+    {
+      "template_id": "urgency_countdown_05",
+      "template_name": "Enrollment Closing Countdown",
+      "description": "Doors/gate closing visual metaphor, countdown timer prominent, 'Enrollment Closes' headline with specific date/time, testimonial quote from previous cohort, program details brief, 'Last Chance to Join' urgency messaging, CTA 'Enroll Before Doors Close', next opening date mentioned (months away)",
+      "visual_structure": {
+        "closing_visual": "Doors closing or gate lowering graphic/metaphor",
+        "countdown": "Large timer showing days:hours:minutes",
+        "headline": "Top, 'Enrollment Closes [Date]'",
+        "testimonial": "Quick quote from successful past participant",
+        "program_snapshot": "3-4 bullet benefits of joining",
+        "next_opening": "Small text: 'Next enrollment: [far future date]'",
+        "cta": "Bottom, urgent 'Enroll Now - Don't Wait Until [Date]'"
+      },
+      "best_for": [
+        "Cohort-based online courses",
+        "Group coaching programs",
+        "Mastermind enrollments",
+        "Membership programs with intake periods",
+        "Training programs with start dates",
+        "Academy and certification programs"
+      ],
+      "color_psychology": "Warning oranges/reds, opportunity greens on CTA",
+      "effectiveness_factors": "Deadline reality, future regret prevention, exclusivity of timing"
+    },
+    {
+      "template_id": "lifestyle_context_01",
+      "template_name": "Lifestyle Integration - Aspirational Scene",
+      "description": "Aspirational lifestyle photo as full background (person using product in ideal setting), dark gradient overlay (40-60% opacity) from bottom, product name top-third in elegant typography, lifestyle benefit headline mid-section, subtle product shot bottom-corner, CTA bottom with semi-transparent background card",
+      "visual_structure": {
+        "background_image": "Full bleed, authentic lifestyle moment, rule-of-thirds",
+        "gradient_overlay": "Bottom-to-top dark gradient for text legibility",
+        "headline": "Top third, large elegant font, lifestyle-focused",
+        "subheading": "Mid-section, aspirational benefit statement",
+        "product_reference": "Small product shot in corner, 15-20% of canvas",
+        "cta_card": "Bottom, semi-transparent white/dark card with button"
+      },
+      "best_for": [
+        "Fashion and apparel",
+        "Travel and hospitality",
+        "Fitness equipment",
+        "Outdoor gear",
+        "Premium food and beverage"
+      ],
+      "color_psychology": "Natural, aspirational colors matching lifestyle setting",
+      "effectiveness_factors": "Emotional aspiration, context visualization, desire triggering"
+    },
+    {
+      "template_id": "lifestyle_context_02",
+      "template_name": "Lifestyle Integration - Action Moment",
+      "description": "Dynamic action shot (person mid-activity using product), motion blur or freeze-frame effect, product clearly visible and central to activity, bold action-oriented headline, energy lines or graphic elements suggesting movement, specifications/features in small sidebar, CTA matches energy level",
+      "visual_structure": {
+        "action_photo": "Full background, captured mid-motion, dynamic composition",
+        "motion_effects": "Blur trails or freeze highlights showing speed/action",
+        "product_visibility": "Clear product integration in action context",
+        "headline": "Large, action verbs, 36-48pt, high contrast",
+        "energy_graphics": "Speed lines, particles, or motion indicators",
+        "spec_sidebar": "Side panel, 20% width, key product specs",
+        "cta": "High-energy, 'Get Moving', 'Start Now'"
+      },
+      "best_for": [
+        "Sports equipment and activewear",
+        "Fitness technology (trackers, apps)",
+        "Adventure and outdoor gear",
+        "Performance footwear",
+        "Action cameras and tech",
+        "Athletic nutrition"
+      ],
+      "color_psychology": "Vibrant, high-energy colors, strong contrasts",
+      "effectiveness_factors": "Energy transfer, capability visualization, active lifestyle appeal"
+    },
+    {
+      "template_id": "lifestyle_context_03",
+      "template_name": "Lifestyle Integration - Peaceful Moment",
+      "description": "Serene, calming lifestyle scene (person relaxing, meditating, enjoying quiet moment with product), soft focus or shallow depth of field, muted pastel or earth-tone color grading, gentle serif typography, product subtly integrated, 'Find Your [Peace/Balance/Calm]' messaging, minimal text, breathing room",
+      "visual_structure": {
+        "serene_photo": "Soft-focus lifestyle image, peaceful composition",
+        "depth_of_field": "Blurred background, subject in gentle focus",
+        "color_grading": "Desaturated, warm or cool peaceful tones",
+        "typography": "Elegant serif or soft sans-serif, generous spacing",
+        "product_integration": "Natural, unforced placement in scene",
+        "minimal_text": "Headline and CTA only, no clutter",
+        "white_space": "Generous breathing room, 40%+ negative space"
+      },
+      "best_for": [
+        "Wellness and meditation apps",
+        "Spa and self-care products",
+        "Sleep and relaxation aids",
+        "Aromatherapy and candles",
+        "Yoga and mindfulness tools",
+        "Organic and natural products",
+        "Home comfort items"
+      ],
+      "color_psychology": "Calming blues, soft greens, warm neutrals, low saturation",
+      "effectiveness_factors": "Emotional calm, stress relief association, aspirational peace"
+    },
+    {
+      "template_id": "lifestyle_context_04",
+      "template_name": "Lifestyle Integration - Social Connection",
+      "description": "Group of people enjoying product together (friends, family, community), genuine smiles and interaction, product facilitating connection, headline emphasizes togetherness, warm inviting colors, 'Share the Experience' or 'Bring People Together' messaging, social proof implicit in group enjoyment",
+      "visual_structure": {
+        "group_photo": "3-5 people genuinely interacting, authentic joy",
+        "product_centrality": "Product as conversation piece or shared experience",
+        "interaction_focus": "Eye contact, laughter, engagement visible",
+        "headline": "Community-focused, 'Better Together' themes",
+        "warm_palette": "Inviting golds, oranges, warm natural light",
+        "social_messaging": "Emphasizes shared experience value",
+        "cta": "'Join the Community' or 'Share With Friends'"
+      },
+      "best_for": [
+        "Food and beverage products (sharing meals, drinks)",
+        "Party and entertainment products",
+        "Games and group activities",
+        "Social platforms and apps",
+        "Family-oriented products",
+        "Community services",
+        "Experience-based offerings"
+      ],
+      "color_psychology": "Warm, inviting, social colors (oranges, yellows, warm reds)",
+      "effectiveness_factors": "Social belonging, FOMO on shared experiences, community appeal"
+    },
+    {
+      "template_id": "lifestyle_context_05",
+      "template_name": "Lifestyle Integration - Morning/Evening Ritual",
+      "description": "Time-of-day specific scene (morning coffee ritual, evening wind-down), golden hour or blue hour lighting, product as part of daily routine, time context clear (sunrise/sunset, clock visible, morning light), ritual-focused headline, creates habit association, 'Start Your Day Right' or 'Perfect Your Evening' messaging",
+      "visual_structure": {
+        "time_specific_photo": "Lighting clearly indicating morning or evening",
+        "golden_blue_hour": "Natural warm morning or cool evening light",
+        "ritual_elements": "Coffee cup, book, routine items visible",
+        "product_ritual_integration": "Product as natural part of routine",
+        "time_headline": "Morning/evening specific messaging",
+        "habit_cues": "Visual elements suggesting routine and consistency",
+        "cta": "'Make It Part of Your Routine'"
+      },
+      "best_for": [
+        "Coffee and tea products",
+        "Skincare morning/night routines",
+        "Supplements and vitamins",
+        "Meditation and journaling apps",
+        "Breakfast and nutrition products",
+        "Evening relaxation aids",
+        "Habit-tracking tools"
+      ],
+      "color_psychology": "Morning: warm golds, energizing; Evening: cool blues, calming",
+      "effectiveness_factors": "Habit formation psychology, routine integration, time-specific relevance"
+    },
+    {
+      "template_id": "stat_impact_dashboard_01",
+      "template_name": "Data-Driven Results - Classic Dashboard",
+      "description": "Dashboard-style layout with 3-4 key statistics in bold numbers (60-80pt), each stat in separate card/panel with icon, brief descriptor below each number, professional gradient background (blue/purple tech gradient), headline top stating core benefit, brand logo top-left, CTA bottom-center",
+      "visual_structure": {
+        "headline": "Top center, benefit-focused, 32-40pt",
+        "stat_cards": "2x2 or 1x3 grid, equal sizing, subtle borders/shadows",
+        "stat_numbers": "60-80pt bold, bright accent color",
+        "stat_labels": "Below numbers, 12-14pt, descriptive",
+        "icons": "Above each stat, single-color, 40-50px",
+        "background": "Professional gradient or geometric pattern",
+        "cta": "Bottom center, 'Learn More' or 'Get Started'"
+      },
+      "best_for": [
+        "B2B SaaS platforms",
+        "Performance marketing agencies",
+        "Financial technology",
+        "Healthcare outcomes",
+        "Educational program results"
+      ],
+      "color_psychology": "Professional blues, teals, purples for trust and technology",
+      "effectiveness_factors": "Credibility through data, concrete proof, logical appeal"
+    },
+    {
+      "template_id": "stat_impact_dashboard_02",
+      "template_name": "Data-Driven Results - Growth Chart",
+      "description": "Large upward trending line graph or bar chart occupying 60% of canvas, key metrics highlighted at peak points, before/after comparison numbers, growth percentage in large bold font, 'X% Growth' headline, timeline axis clearly labeled, supporting stats in sidebar, data-rich but clean design",
+      "visual_structure": {
+        "chart_area": "Center 60%, professional line or bar chart",
+        "trend_line": "Clear upward trajectory, brand-colored line",
+        "data_points": "Key milestones labeled on chart",
+        "growth_headline": "Top, 'X% Increase' or 'X Million Reached'",
+        "timeline_axis": "Bottom of chart, monthly/yearly markers",
+        "sidebar_stats": "Right 30%, supporting metrics in compact format",
+        "source_citation": "Small text, 'Based on [data source]' for credibility"
+      },
+      "best_for": [
+        "Performance reporting services",
+        "Investment platforms",
+        "Growth-focused SaaS",
+        "Analytics tools",
+        "ROI-heavy services",
+        "Financial advisors",
+        "Marketing agencies showing client growth"
+      ],
+      "color_psychology": "Green for growth, blues for trust, professional palette",
+      "effectiveness_factors": "Visual proof of results, trend clarity, data credibility"
+    },
+    {
+      "template_id": "stat_impact_dashboard_03",
+      "template_name": "Data-Driven Results - Comparison Bars",
+      "description": "Side-by-side or stacked comparison bars showing 'Before Us' vs. 'After Us' or 'Competitor' vs. 'Us', dramatic difference in bar lengths, percentage improvement highlighted, specific metrics labeled on bars, 'X Times Better' headline, color contrast between comparison bars, supporting explanation text",
+      "visual_structure": {
+        "comparison_bars": "Two sets of bars, horizontal or vertical layout",
+        "bar_labels": "Clear labeling: 'Before/After' or 'Them/Us'",
+        "length_difference": "Dramatic visual difference showing improvement",
+        "percentage_badges": "Improvement % highlighted between bars",
+        "headline": "'3X Faster' or 'Save 50% More' type messaging",
+        "color_contrast": "Competitor/before in gray, us/after in vibrant brand color",
+        "explanation": "Brief text explaining what metrics represent"
+      },
+      "best_for": [
+        "Competitive advantage messaging",
+        "Performance improvements",
+        "Efficiency tools",
+        "Cost-saving services",
+        "Speed and optimization products",
+        "Before/after measurable results"
+      ],
+      "color_psychology": "Gray for baseline, vibrant for improvement, green for gains",
+      "effectiveness_factors": "Direct comparison, visual impact, improvement clarity"
+    },
+    {
+      "template_id": "stat_impact_dashboard_04",
+      "template_name": "Data-Driven Results - Achievement Milestones",
+      "description": "Vertical timeline showing milestone achievements, large numbers for each milestone (1M users, 50K businesses, 100 countries), icons representing each achievement, connecting line between milestones, dates for each milestone, 'Our Journey' or 'Proven Track Record' headline, growth narrative implied",
+      "visual_structure": {
+        "vertical_timeline": "Left side, vertical line connecting milestones",
+        "milestone_points": "4-6 circular nodes on timeline",
+        "achievement_numbers": "Large bold numbers, 48-72pt",
+        "achievement_icons": "Icon representing each milestone type",
+        "dates": "Small text showing when milestone reached",
+        "headline": "Top, 'Proven Growth' or 'Trusted Globally'",
+        "connecting_line": "Dashed or solid line showing progression",
+        "current_position": "Bottom milestone highlighted as 'Today'"
+      },
+      "best_for": [
+        "Established companies showing credibility",
+        "Platforms with user growth stories",
+        "Global expansion narratives",
+        "Scale and reach demonstration",
+        "Trust-building through milestones"
+      ],
+      "color_psychology": "Progressive color intensity, latest milestone most vibrant",
+      "effectiveness_factors": "Historical credibility, growth demonstration, scale proof"
+    },
+    {
+      "template_id": "stat_impact_dashboard_05",
+      "template_name": "Data-Driven Results - Real-Time Counter",
+      "description": "Live counter aesthetic showing accumulating number, 'X Customers Served Today' or 'Y Transactions This Hour', animated number rolling effect implied, time-based metric (today, this week, this month), creates urgency through activity proof, supporting stats around counter, 'Join Thousands' messaging",
+      "visual_structure": {
+        "counter_display": "Center, large digital-style numbers, 60-80pt",
+        "rolling_effect": "Visual suggestion of numbers incrementing",
+        "time_frame": "Clear label: 'Today', 'This Month', 'This Year'",
+        "activity_headline": "'X People Joined Today' format",
+        "supporting_stats": "Smaller metrics surrounding main counter",
+        "live_indicator": "Small 'LIVE' badge or pulsing dot",
+        "cta": "'Join Them' or 'Be Part of This'"
+      },
+      "best_for": [
+        "High-volume platforms and services",
+        "Popular apps with active user bases",
+        "E-commerce with high transaction volume",
+        "Growing communities",
+        "Viral or trending products",
+        "Event registrations"
+      ],
+      "color_psychology": "Active greens, live reds, dynamic tech colors",
+      "effectiveness_factors": "Social proof through volume, FOMO, momentum demonstration"
+    },
+    {
+      "template_id": "minimalist_luxury_01",
+      "template_name": "Premium Minimalist - Center Focus",
+      "description": "90% white/neutral space, product centered (30% of canvas), minimal elegant serif headline above product, single-line refined tagline below, small understated logo bottom-corner, monochromatic or two-tone maximum color scheme, thin divider lines for sophistication, subtle CTA as text link",
+      "visual_structure": {
+        "white_space": "Generous margins, 90% breathing room",
+        "product_placement": "Perfect center, isolated, professional photography",
+        "headline": "Above product, serif font, 36-48pt, letter-spaced",
+        "tagline": "Below product, light weight, 14-16pt",
+        "logo": "Bottom corner, small and refined",
+        "color_scheme": "Monochrome or black + one accent color",
+        "cta": "Minimal text link, underlined, not button"
+      },
+      "best_for": [
+        "Luxury fashion",
+        "High-end jewelry and watches",
+        "Premium cosmetics",
+        "Luxury automotive",
+        "Fine art and collectibles"
+      ],
+      "color_psychology": "Black, white, gold, or single sophisticated accent",
+      "effectiveness_factors": "Perceived value through space, elegance, exclusivity signaling"
+    },
+    {
+      "template_id": "minimalist_luxury_02",
+      "template_name": "Premium Minimalist - Texture Focus",
+      "description": "Close-up detail shot showing product texture/craftsmanship (leather grain, fabric weave, metal finish), 70% of canvas is texture detail, minimal text overlay, materials and craftsmanship headline, 'Handcrafted' or 'Made in [Country]' emphasis, subtle embossed or foil effect on text, quality story in small paragraph",
+      "visual_structure": {
+        "texture_closeup": "70% canvas, macro detail showing quality",
+        "detail_focus": "Grain, weave, finish clearly visible",
+        "minimal_text": "Small elegant headline, 24-32pt",
+        "craftsmanship_note": "'Handcrafted in Italy' or similar, small caps",
+        "material_description": "Brief paragraph, 12-14pt, about materials",
+        "logo": "Very small, corner placement",
+        "cta": "Minimal, 'Discover' or 'Explore'"
+      },
+      "best_for": [
+        "Artisanal and handcrafted products",
+        "Luxury leather goods",
+        "Fine textiles and fabrics",
+        "Premium furniture",
+        "Heritage brands",
+        "Bespoke and custom products"
+      ],
+      "color_psychology": "Natural material colors, warm neutrals, authentic tones",
+      "effectiveness_factors": "Quality visibility, craftsmanship appreciation, tactile appeal"
+    },
+    {
+      "template_id": "minimalist_luxury_03",
+      "template_name": "Premium Minimalist - Asymmetric Balance",
+      "description": "Product positioned off-center following golden ratio, large negative space opposite side, headline in negative space area (minimal text), geometric accent line or shape as subtle design element, sophisticated asymmetry, brand mark small and subtle, creates visual tension and interest through imbalance",
+      "visual_structure": {
+        "golden_ratio_placement": "Product at 1/3 or 2/3 point, not centered",
+        "negative_space": "Large empty area, intentionally unbalanced",
+        "headline_in_space": "Minimal text in negative space, 28-36pt",
+        "geometric_accent": "Single thin line or minimal shape for interest",
+        "asymmetric_composition": "Deliberate imbalance creating sophistication",
+        "logo": "Opposite corner from product, very small",
+        "color_minimal": "Maximum 2 colors plus white/black"
+      },
+      "best_for": [
+        "Avant-garde fashion",
+        "Designer furniture",
+        "Contemporary art galleries",
+        "Architectural services",
+        "Modern luxury brands",
+        "Design-forward products"
+      ],
+      "color_psychology": "Sophisticated monochromes, single bold accent if any",
+      "effectiveness_factors": "Design sophistication, visual interest through restraint, modern elegance"
+    },
+    {
+      "template_id": "minimalist_luxury_04",
+      "template_name": "Premium Minimalist - Monogram Focus",
+      "description": "Large elegant monogram or brand mark as focal point (40% of canvas), product smaller in background or corner, emphasis on brand heritage and identity, classic serif or custom typography, minimal supporting text, 'Since [Year]' or heritage tagline, creates brand worship aesthetic",
+      "visual_structure": {
+        "monogram_focal": "Large brand mark or monogram, 40% canvas",
+        "typography_elegance": "Custom or classic serif, refined letter-spacing",
+        "product_secondary": "Smaller product shot, 20% canvas, background role",
+        "heritage_text": "'Since 1923' or 'Est. [Year]' small but prominent",
+        "minimal_palette": "Black, white, single brand color maximum",
+        "tagline": "Single line, small, refined positioning",
+        "luxury_spacing": "Extreme letter-spacing on monogram for luxury feel"
+      },
+      "best_for": [
+        "Heritage luxury brands",
+        "Established fashion houses",
+        "Legacy products with history",
+        "Brand-focused luxury items",
+        "Status symbol products",
+        "Monogram-driven luxury goods"
+      ],
+      "color_psychology": "Classic luxury: black, navy, burgundy, gold accents",
+      "effectiveness_factors": "Brand prestige, heritage value, status association"
+    },
+    {
+      "template_id": "minimalist_luxury_05",
+      "template_name": "Premium Minimalist - Shadow Play",
+      "description": "Product with dramatic shadow as key design element, shadow creates geometric pattern or interesting shape, minimal direct lighting creates mood, product silhouette partially visible, mystery and intrigue through lighting, 'Discover' or 'Unveil' thematic messaging, artistic photography approach",
+      "visual_structure": {
+        "shadow_design": "Product shadow as compositional element",
+        "lighting_drama": "High contrast lighting, defined shadows",
+        "partial_visibility": "Product partially in shadow, creates intrigue",
+        "geometric_shadows": "Shadow forms interesting shapes/patterns",
+        "minimal_text": "Single headline, small, 24-30pt",
+        "mystery_mood": "Dark, moody, intriguing aesthetic",
+        "cta": "'Discover' or 'Unveil' thematic to mystery"
+      },
+      "best_for": [
+        "Fragrance and perfume",
+        "Exclusive limited editions",
+        "Mystery and intrigue products",
+        "Evening wear and accessories",
+        "Luxury experiences",
+        "Premium spirits"
+      ],
+      "color_psychology": "Deep blacks, dramatic contrasts, single accent color",
+      "effectiveness_factors": "Intrigue creation, artistic appeal, premium mystique"
+    },
+    {
+      "template_id": "problem_agitation_solution_01",
+      "template_name": "PAS - Three Horizontal Sections",
+      "description": "Three horizontal sections: top section (30%) shows problem with frustrated person/scenario in red/dark tones, middle section (20%) agitates with '×' marks and pain point list, bottom section (50%) presents solution with product, checkmarks, and vibrant colors, progressive color transition",
+      "visual_structure": {
+        "problem_zone": "Top 30%, dark overlay, problem visual, 'STRUGGLING WITH...'",
+        "agitation_zone": "Middle 20%, red accent, bullet points with × marks",
+        "solution_zone": "Bottom 50%, bright, product showcase, ✓ checkmarks",
+        "color_transition": "Dark/muted → medium → bright/vibrant",
+        "headline_progression": "Problem → Pain Points → Solution",
+        "cta": "Bottom of solution zone, action-oriented"
+      },
+      "best_for": [
+        "Pain point-heavy products",
+        "Organizational tools",
+        "Cleaning services",
+        "Stress relief apps",
+        "Time-saving appliances"
+      ],
+      "color_psychology": "Red/gray for problem, transition to green/blue for solution",
+      "effectiveness_factors": "Problem awareness, pain amplification, relief positioning"
+    },
+    {
+      "template_id": "problem_agitation_solution_02",
+      "template_name": "PAS - Question Format",
+      "description": "Opens with relatable problem question in large text (40% of space), 'Are You Tired of [Problem]?', bullet list of pain points with red × marks below, product image and solution statement bottom half, 'Introducing [Solution]' headline, checkmark benefits, transformation from question to answer format",
+      "visual_structure": {
+        "problem_question": "Top 40%, large empathetic question, 36-48pt",
+        "pain_bullets": "Below question, 4-5 pain points with × marks",
+        "divider": "Visual break between problem and solution",
+        "solution_intro": "'Introducing...' headline, 28-32pt",
+        "product_image": "Bottom section, 30% of canvas",
+        "solution_benefits": "Checkmarks with benefit statements",
+        "cta": "Bottom, 'Solve This Problem Now'"
+      },
+      "best_for": [
+        "Problem-aware audiences",
+        "Educational marketing",
+        "Services solving specific frustrations",
+        "Tools addressing known pain points",
+        "Replacement products for failed solutions"
+      ],
+      "color_psychology": "Problem: dark reds, grays; Solution: hopeful greens, blues",
+      "effectiveness_factors": "Empathy through questioning, problem identification, solution clarity"
+    },
+    {
+      "template_id": "problem_agitation_solution_03",
+      "template_name": "PAS - Day in the Life Nightmare",
+      "description": "Comic strip or sequential panel style showing problem scenario escalating, 3-4 panels showing problem getting worse throughout day, frustrated character illustrations, final large panel shows solution breaking the cycle, 'Stop the Cycle' or 'Break Free' messaging, relatable narrative arc",
+      "visual_structure": {
+        "panel_sequence": "3-4 equal panels showing time progression",
+        "escalation_visual": "Problem worsening through panels",
+        "character_frustration": "Illustrated person getting more stressed",
+        "time_markers": "Morning, noon, evening labels on panels",
+        "solution_panel": "Larger final panel, breaks pattern, shows relief",
+        "headline": "'Your Day Without [Solution]' vs 'With [Solution]'",
+        "cta": "'Break the Cycle Today'"
+      },
+      "best_for": [
+        "Daily use products",
+        "Habit-changing solutions",
+        "Productivity tools",
+        "Stress management products",
+        "Daily routine improvements",
+        "Time-saving services"
+      ],
+      "color_psychology": "Progressive darkening through problem, bright solution panel",
+      "effectiveness_factors": "Narrative relatability, escalation reality, clear breaking point"
+    },
+    {
+      "template_id": "problem_agitation_solution_04",
+      "template_name": "PAS - Cost of Inaction",
+      "description": "Left side shows ongoing cost/consequence of not solving problem (money draining, time wasting, stress accumulating), right side shows solution investment and ROI, comparison format, 'Cost of Doing Nothing' vs. 'Investment in Solution', calculator or measurement visual metaphor",
+      "visual_structure": {
+        "left_cost_side": "Ongoing costs, red color, downward arrows or drain visual",
+        "cost_calculations": "Specific dollar amounts or time quantities lost",
+        "right_solution_side": "One-time or manageable investment, green, upward trend",
+        "roi_display": "Return on investment clearly shown",
+        "comparison_headline": "'Pay Now vs Pay Forever' type messaging",
+        "visual_metaphor": "Drain, leak, or bleeding money on problem side",
+        "cta": "'Stop Wasting [Money/Time]'"
+      },
+      "best_for": [
+        "Financial products showing savings",
+        "Efficiency tools with ROI",
+        "Preventive maintenance services",
+        "Health products preventing future costs",
+        "Time-saving business solutions"
+      ],
+      "color_psychology": "Red for costs/losses, green for gains/savings",
+      "effectiveness_factors": "Loss aversion trigger, ROI clarity, rational justification"
+    },
+    {
+      "template_id": "problem_agitation_solution_05",
+      "template_name": "PAS - Enemy Identification",
+      "description": "Personifies the problem as an enemy or villain, dark illustration or photo of 'the enemy' (clutter, stress, inefficiency), 'Your Enemy: [Problem]' headline, agitation through villain's impacts listed, product positioned as hero/weapon against enemy, 'Fight Back' or 'Defeat [Enemy]' messaging, epic battle framing",
+      "visual_structure": {
+        "enemy_visual": "Dark, menacing representation of problem (abstract or literal)",
+        "enemy_headline": "'Your Enemy: Chaos' or similar, 32-40pt",
+        "impact_list": "How enemy attacks you, bullet points, aggressive language",
+        "hero_introduction": "Product as hero/weapon, contrasting bright visual",
+        "battle_framing": "David vs. Goliath, hero vs. villain narrative",
+        "cta": "'Defeat [Enemy] Today' or 'Join the Fight'"
+      },
+      "best_for": [
+        "Security products (cyber, home)",
+        "Cleaning and organizing products",
+        "Health and immunity products",
+        "Protective services",
+        "Pest control",
+        "Antivirus and protection software"
+      ],
+      "color_psychology": "Dark, threatening tones for enemy; bright, empowering for solution",
+      "effectiveness_factors": "Emotional personification, clear antagonist, heroic positioning"
+    },
+    {
+      "template_id": "social_proof_carousel_01",
+      "template_name": "Multi-Brand Trust Signals - Logo Grid",
+      "description": "Headline top-center stating credibility claim, grid of 6-8 well-known client/media logos in grayscale (middle 50%), trust badges below logos (awards, certifications, ratings), aggregate statistic prominently displayed ('Trusted by 50,000+'), minimal product reference, strong CTA",
+      "visual_structure": {
+        "headline": "Top 20%, trust-focused statement",
+        "logo_grid": "Center 50%, 2-4 rows of prestigious logos, grayscale",
+        "trust_badges": "Below logos, certifications/awards/ratings",
+        "aggregate_stat": "Large number display, '50K+ customers'",
+        "product_hint": "Small product image or icon",
+        "cta": "Bottom, 'Join Them' or 'Get Started'"
+      },
+      "best_for": [
+        "Enterprise B2B software",
+        "Press and media recognition",
+        "Certification-heavy services",
+        "Platforms with large user bases",
+        "Award-winning products"
+      ],
+      "color_psychology": "Professional blues and grays, gold for awards",
+      "effectiveness_factors": "Authority transfer, risk reduction, bandwagon effect"
+    },
+    {
+      "template_id": "social_proof_carousel_02",
+      "template_name": "Multi-Brand Trust - Media Mentions Ticker",
+      "description": "TV news ticker or scrolling banner aesthetic, media outlet logos and quotes flowing horizontally, 'As Featured In' headline, multiple prestigious publications shown, pull quotes from articles visible, creates impression of widespread coverage, product/service name repeated across quotes",
+      "visual_structure": {
+        "ticker_bar": "Horizontal scrolling bar aesthetic, 30% of canvas",
+        "media_logos": "CNN, Forbes, TechCrunch style logos in sequence",
+        "pull_quotes": "Short quotes from articles between logos",
+        "headline": "'As Featured In' or 'Media Praise', top of canvas",
+        "movement_implication": "Design suggesting scrolling/movement",
+        "product_context": "Small product image above or below ticker",
+        "cta": "Bottom, 'See What Everyone's Talking About'"
+      },
+      "best_for": [
+        "Startups with PR coverage",
+        "Products with media buzz",
+        "Award-winning innovations",
+        "Newsworthy services",
+        "Trending apps and platforms"
+      ],
+      "color_psychology": "News-authentic colors, professional blacks and whites",
+      "effectiveness_factors": "Media authority, widespread recognition, trending status"
+    },
+    {
+      "template_id": "social_proof_carousel_03",
+      "template_name": "Multi-Brand Trust - Rating Aggregator",
+      "description": "Multiple rating sources shown simultaneously (Google 4.9, Trustpilot 5.0, G2 4.8), large star graphics for each source, 'Rated Excellent Across All Platforms' headline, review count for each source, creates omnichannel trust, comparison showing consistency across platforms",
+      "visual_structure": {
+        "rating_sources": "3-4 platforms shown: Google, Trustpilot, Capterra, etc.",
+        "star_graphics": "Large 5-star displays for each, 60-80px",
+        "rating_numbers": "X.X/5.0 format, bold, 32-40pt",
+        "review_counts": "Based on [X] reviews, for each platform",
+        "headline": "'Excellent Across All Platforms' or similar",
+        "consistency_message": "Highlighting uniform high ratings",
+        "cta": "'See All Reviews' or 'Join Happy Customers'"
+      },
+      "best_for": [
+        "SaaS with multi-platform reviews",
+        "E-commerce with diverse review sources",
+        "Services with strong omnichannel presence",
+        "Apps with multiple app store ratings",
+        "B2B platforms with industry reviews"
+      ],
+      "color_psychology": "Gold stars, platform-authentic colors (Google blue, Trustpilot green)",
+      "effectiveness_factors": "Cross-platform validation, consistency proof, volume demonstration"
+    },
+    {
+      "template_id": "social_proof_carousel_04",
+      "template_name": "Multi-Brand Trust - Fortune 500 Grid",
+      "description": "Specific emphasis on high-caliber clients, 'Trusted by Fortune 500 Companies' headline, grid of major corporation logos (larger than typical), possibly blurred background showing more logos to suggest even more clients, creates enterprise credibility, B2B focused social proof",
+      "visual_structure": {
+        "headline": "Top, 'Trusted by Industry Leaders' or 'Fortune 500 Approved'",
+        "featured_logos": "4-6 major company logos, larger than typical, 150-200px",
+        "background_logos": "Many more logos blurred in background suggesting scale",
+        "layout": "Featured logos in sharp focus foreground",
+        "logo_treatment": "Full color or subtle color to show prestige",
+        "stat": "'500+ Enterprise Clients' or similar",
+        "cta": "'Join Enterprise Leaders'"
+      },
+      "best_for": [
+        "Enterprise B2B software",
+        "Professional services for large companies",
+        "High-value B2B solutions",
+        "Platforms targeting corporate clients",
+        "Services requiring enterprise credibility"
+      ],
+      "color_psychology": "Professional corporate colors, prestigious blues",
+      "effectiveness_factors": "Enterprise authority, prestige transfer, capability proof"
+    },
+    {
+      "template_id": "social_proof_carousel_05",
+      "template_name": "Multi-Brand Trust - Case Study Tease",
+      "description": "Mini case study format, single prominent client logo, before/after stat ('Increased Revenue 300%'), quote from client executive, 'Read Full Case Study' link, positions as one example of many, '...And 500 More Success Stories' text, creates depth of proof",
+      "visual_structure": {
+        "client_logo": "Top center, prominent company logo, 150-180px",
+        "key_stat": "Large percentage or number showing result, 48-60pt",
+        "executive_quote": "Short quote with photo, name, title",
+        "case_study_link": "'Read Full Story' link or button",
+        "more_indication": "'One of 500+ Success Stories' subtext",
+        "background": "Subtle product or service visual",
+        "cta": "Bottom, 'See Your Potential Results'"
+      },
+      "best_for": [
+        "B2B services with measurable results",
+        "Platforms with case study library",
+        "Agencies with client portfolio",
+        "Solutions with quantifiable impact",
+        "Consulting with success stories"
+      ],
+      "color_psychology": "Professional, client brand colors respected, result stats in green",
+      "effectiveness_factors": "Concrete example, measurable proof, depth suggestion through 'more'"
+    },
+    {
+      "template_id": "feature_highlight_01",
+      "template_name": "Single Feature Spotlight - Annotation Focus",
+      "description": "One hero feature visual/screenshot occupying 50%, spotlight circle or glow effect highlighting specific feature, feature name as bold headline opposite side, 3-4 bullet points explaining benefit, supporting micro-illustration, secondary CTA mentioning 'Explore All Features'",
+      "visual_structure": {
+        "feature_visual": "50% of canvas, high-quality screenshot or product close-up",
+        "spotlight_effect": "Circular glow or annotation highlighting element",
+        "headline": "Opposite side, feature name, 36-48pt bold",
+        "benefit_bullets": "3-4 points, benefit-focused not feature-list",
+        "supporting_icon": "Small illustration reinforcing concept",
+        "cta_primary": "Main action button",
+        "cta_secondary": "Text link to full feature list"
+      },
+      "best_for": [
+        "SaaS product launches",
+        "App updates",
+        "Tech product differentiators",
+        "Software tool capabilities",
+        "Smart device features"
+      ],
+      "color_psychology": "Tech blues/purples with bright accent for spotlight",
+      "effectiveness_factors": "Focused attention, specific value demonstration, clarity"
+    },
+    {
+      "template_id": "feature_highlight_02",
+      "template_name": "Feature Highlight - Icon Grid Showcase",
+      "description": "6-9 feature icons in grid, one feature highlighted/enlarged (2x size of others), highlighted feature has description panel, other features labeled but minimal, creates hierarchy while showing breadth, 'Featuring [Main Feature] and More' headline, comprehensive yet focused",
+      "visual_structure": {
+        "icon_grid": "3x3 or 2x4 grid of feature icons",
+        "hero_feature": "Center or corner, 2x larger than others",
+        "hero_description": "Panel or card attached to hero feature",
+        "other_features": "Standard size, icon + label only",
+        "headline": "Top, emphasizing main feature while noting others",
+        "visual_hierarchy": "Clear size difference creating focus",
+        "cta": "Bottom, specific to hero feature"
+      },
+      "best_for": [
+        "Multi-feature platforms introducing new capability",
+        "Swiss army knife products highlighting one tool",
+        "Comprehensive solutions with spotlight feature",
+        "Updates adding major feature to existing product",
+        "All-in-one tools with hero feature"
+      ],
+      "color_psychology": "Hero feature in full color, others muted or grayscale",
+      "effectiveness_factors": "Breadth indication, focused promotion, hierarchy clarity"
+    },
+    {
+      "template_id": "feature_highlight_03",
+      "template_name": "Feature Highlight - Before Without/After With",
+      "description": "Split showing workflow before feature (left, cluttered/complex) and after feature (right, simple/streamlined), similar to before/after but focused on process improvement, arrows showing simplified steps, time savings displayed, 'Save X Hours Per Week' headline",
+      "visual_structure": {
+        "left_before": "Complex workflow diagram, many steps, time-consuming",
+        "right_after": "Simple workflow, feature enabled, fewer steps",
+        "process_comparison": "Visual representation of complexity reduction",
+        "time_metric": "Hours saved prominently displayed",
+        "headline": "'Automate What Used to Take Hours'",
+        "arrow_indicators": "Showing streamlined path on 'after' side",
+        "cta": "'Simplify Your Workflow'"
+      },
+      "best_for": [
+        "Automation features",
+        "Workflow optimization tools",
+        "Process improvement software",
+        "Time-saving features",
+        "Efficiency-focused updates",
+        "Integration features simplifying tasks"
+      ],
+      "color_psychology": "Complex/red for before, simple/green for after",
+      "effectiveness_factors": "Process clarity, time saving visualization, efficiency proof"
+    },
+    {
+      "template_id": "feature_highlight_04",
+      "template_name": "Feature Highlight - Use Case Scenario",
+      "description": "Real-world scenario showing feature in action, character/persona using the feature, thought bubble or caption explaining situation, feature UI overlay showing how it solves problem in moment, narrative approach making feature relatable, 'Meet Sarah, Who...' storytelling",
+      "visual_structure": {
+        "scenario_visual": "Person in situation where feature helps",
+        "character_intro": "'Meet Sarah' with brief persona description",
+        "problem_moment": "Visual showing the challenge Sarah faces",
+        "feature_overlay": "UI screenshot showing feature solving problem",
+        "narrative_text": "Brief story arc in captions",
+        "relatable_headline": "'For [Persona Type] Who [Situation]'",
+        "cta": "'Try It In Your Workflow'"
+      },
+      "best_for": [
+        "B2B tools with clear use cases",
+        "Features solving specific job-related problems",
+        "Persona-targeted feature releases",
+        "Context-dependent features",
+        "Workflow-specific tools"
+      ],
+      "color_psychology": "Realistic scenario colors, feature UI highlighted in brand color",
+      "effectiveness_factors": "Relatability, context understanding, persona targeting"
+    },
+    {
+      "template_id": "feature_highlight_05",
+      "template_name": "Feature Highlight - Comparison Table",
+      "description": "Table showing 'Without Feature' column vs. 'With Feature' column, 5-7 comparison points, clear checkmarks vs. X marks, dramatic difference in capabilities, 'Why This Changes Everything' headline, quantifiable improvements where possible",
+      "visual_structure": {
+        "table_layout": "Two columns: Without vs. With",
+        "comparison_rows": "5-7 specific capability differences",
+        "checkmarks": "Green ✓ in 'with' column, red × in 'without'",
+        "headline": "Top, 'See the Difference' or 'Why It Matters'",
+        "quantified_improvements": "Numbers where applicable (2x faster, 50% less time)",
+        "visual_hierarchy": "'With' column emphasized with color",
+        "cta": "'Upgrade to Unlock' or 'Enable This Feature'"
+      },
+      "best_for": [
+        "Premium feature upsells",
+        "Tier comparison showing feature value",
+        "Freemium to paid conversion",
+        "Add-on feature promotion",
+        "Capability-locked features"
+      ],
+      "color_psychology": "Green for advantages, red for limitations, clear contrast",
+      "effectiveness_factors": "Clear value differentiation, upgrade motivation, logical justification"
+    },
+    {
+      "template_id": "seasonal_themed_01",
+      "template_name": "Seasonal Campaign - Holiday Classic",
+      "description": "Season-appropriate background (autumn leaves, winter snow, spring flowers, summer beach), product integrated naturally into seasonal scene, holiday-specific color palette, themed decorative elements (borders, icons), seasonal offer headline with urgency, festive typography treatment, time-sensitive CTA",
+      "visual_structure": {
+        "seasonal_background": "Full bleed, season-appropriate imagery",
+        "product_integration": "Product naturally placed in seasonal context",
+        "themed_elements": "Season-specific decorations, borders, patterns",
+        "color_palette": "Holiday/season colors (red/green Christmas, pastels Spring)",
+        "headline": "Seasonal offer statement, festive font treatment",
+        "urgency_element": "Dates, countdown, limited time messaging",
+        "cta": "Season-appropriate action"
+      },
+      "best_for": [
+        "Retail seasonal sales",
+        "Holiday gift guides",
+        "Seasonal fashion collections",
+        "Travel packages",
+        "Seasonal food and beverage"
+      ],
+      "color_psychology": "Season-specific palettes triggering nostalgic associations",
+      "effectiveness_factors": "Timely relevance, emotional nostalgia, cultural momentum"
+    },
+    {
+      "template_id": "seasonal_themed_02",
+      "template_name": "Seasonal Campaign - Calendar Countdown",
+      "description": "Calendar visual showing days until holiday/season, each date box a mini product showcase or deal preview, current date highlighted, 'X Days Until [Holiday]' headline, advent calendar aesthetic for gift-giving seasons, creates anticipation and daily engagement",
+      "visual_structure": {
+        "calendar_grid": "Monthly calendar format, current month displayed",
+        "highlighted_date": "Target holiday date circled or emphasized",
+        "date_boxes": "Some boxes contain mini product images or deals",
+        "countdown_number": "Large 'X Days Until' counter",
+        "advent_style": "For December, daily reveal aesthetic",
+        "headline": "'Count Down to [Holiday] Savings'",
+        "cta": "'Shop Holiday Collection'"
+      },
+      "best_for": [
+        "Advent calendar promotions",
+        "Holiday countdown sales",
+        "Limited-time seasonal offers",
+        "Gift-giving season campaigns",
+        "Daily deal events"
+      ],
+      "color_psychology": "Holiday-appropriate festive colors, date progression visual",
+      "effectiveness_factors": "Anticipation building, daily engagement, time-bound urgency"
+    },
+    {
+      "template_id": "seasonal_themed_03",
+      "template_name": "Seasonal Campaign - Gift Guide Format",
+      "description": "Curated selection of products arranged as gift guide, 'Perfect Gifts for [Persona]' headline, products tagged with price points, 'For Her', 'For Him', 'For Kids' categories, wrapping paper or gift box visual elements, makes gifting decisions easy, holiday shopping focused",
+      "visual_structure": {
+        "product_grid": "4-6 products arranged in attractive grid",
+        "category_labels": "Clear persona or recipient labels",
+        "price_tags": "Price prominently shown for each item",
+        "gift_elements": "Ribbon, wrapping paper, bow graphics",
+        "headline": "'Holiday Gift Guide' or 'Gifts They'll Love'",
+        "recommendation_text": "Brief description why each gift works",
+        "cta": "'Shop Gifts' or 'Find the Perfect Gift'"
+      },
+      "best_for": [
+        "Holiday gift shopping campaigns",
+        "Mother's/Father's Day",
+        "Valentine's Day",
+        "Graduation season",
+        "Anniversary gifts",
+        "Seasonal gift occasions"
+      ],
+      "color_psychology": "Festive wrapping colors, holiday-appropriate palette",
+      "effectiveness_factors": "Decision simplification, gifting confidence, curated selection appeal"
+    },
+    {
+      "template_id": "seasonal_themed_04",
+      "template_name": "Seasonal Campaign - Weather-Triggered",
+      "description": "Directly addresses weather/season change, 'First Frost Sale' or 'Heat Wave Relief' headline, product as solution to seasonal need, weather icon prominent (sun, snowflake, umbrella), temperature or weather condition referenced, immediate need addressing, 'Stay [Warm/Cool/Dry]' messaging",
+      "visual_structure": {
+        "weather_icon": "Large weather symbol (snowflake, sun, rain), 100-120px",
+        "product_hero": "Product addressing seasonal need (coat, AC, umbrella)",
+        "temperature_reference": "'When It Hits 90°' or 'Below Freezing' mention",
+        "headline": "Weather-reactive messaging, 'Beat the Heat' style",
+        "seasonal_need": "Explicit connection between weather and product need",
+        "urgency": "'Before the Next Storm' or 'While Supplies Last'",
+        "cta": "'Stay Prepared' or 'Get Ready'"
+      },
+      "best_for": [
+        "Weather-dependent products (heating, cooling)",
+        "Seasonal clothing (winter coats, swimwear)",
+        "Emergency preparedness",
+        "Outdoor equipment",
+        "Home maintenance services",
+        "Weather protection products"
+      ],
+      "color_psychology": "Weather-appropriate (cool blues for summer, warm orange for winter)",
+      "effectiveness_factors": "Immediate need triggering, timely relevance, practical urgency"
+    },
+    {
+      "template_id": "seasonal_themed_05",
+      "template_name": "Seasonal Campaign - Cultural Celebration",
+      "description": "Celebrates specific cultural holiday or event, culturally appropriate imagery and colors, respectful authentic representation, 'Celebrate [Holiday] With Us' headline, products positioned as part of celebration, traditional elements incorporated tastefully, inclusive approach",
+      "visual_structure": {
+        "cultural_imagery": "Authentic culturally-specific visuals",
+        "traditional_elements": "Respectful incorporation of holiday symbols",
+        "color_scheme": "Culturally significant colors (Diwali: gold/orange, Lunar New Year: red/gold)",
+        "headline": "'Celebrate [Cultural Holiday]' messaging",
+        "product_integration": "Products as part of celebration (food, clothing, gifts)",
+        "respectful_tone": "Authentic, not appropriative visual approach",
+        "cta": "'Honor the Tradition' or 'Join the Celebration'"
+      },
+      "best_for": [
+        "Diwali promotions",
+        "Lunar New Year campaigns",
+        "Ramadan/Eid offers",
+        "Cultural heritage month recognition",
+        "International holiday marketing",
+        "Multicultural celebrations"
+      ],
+      "color_psychology": "Culturally significant traditional color palettes",
+      "effectiveness_factors": "Cultural relevance, community connection, authentic celebration"
+    },
+    {
+      "template_id": "comparison_table_01",
+      "template_name": "Competitive Advantage Table - Three Column",
+      "description": "Three-column comparison: 'Competitor A' (left), 'US/Our Product' (center, highlighted), 'Competitor B' (right), 5-7 feature rows with checkmarks and X marks, center column has accent background color, 'BEST VALUE' badge on our column, pricing row at bottom, CTA under our column only",
+      "visual_structure": {
+        "column_headers": "Three equal columns, center emphasized",
+        "feature_rows": "5-7 rows, alternating subtle backgrounds",
+        "checkmarks": "Green ✓ yes, red × no, sized 24-30px",
+        "highlight_column": "Center column with subtle background tint",
+        "badge": "Ribbon or star on our column header",
+        "pricing_row": "Bottom row, bold pricing",
+        "cta": "Only under center column"
+      },
+      "best_for": [
+        "SaaS platform differentiation",
+        "Service tier comparisons",
+        "Product specifications",
+        "Insurance comparisons",
+        "Subscription features"
+      ],
+      "color_psychology": "Green for advantages, red/gray for competitor weaknesses",
+      "effectiveness_factors": "Rational decision support, direct comparison, value clarity"
+    },
+    {
+      "template_id": "comparison_table_02",
+      "template_name": "Competitive Advantage - Visual Feature Comparison",
+      "description": "Instead of checkmarks, uses visual icons or mini screenshots showing feature quality difference, side-by-side visual comparison for each feature, 'How We Compare' headline, qualitative not just quantitative comparison, shows not just presence but superiority of features",
+      "visual_structure": {
+        "feature_rows": "5-6 comparison rows with icons/visuals",
+        "visual_comparison": "Mini screenshots or icons showing capability",
+        "quality_indicators": "Stars, quality ratings beyond yes/no",
+        "headline": "'See the Difference' or 'How We Compare'",
+        "our_column": "Enhanced visuals showing superior implementation",
+        "competitor_columns": "Basic or limited capability visuals",
+        "cta": "'Choose the Better Option'"
+      },
+      "best_for": [
+        "UI/UX focused products",
+        "Design quality differentiation",
+        "Feature implementation comparison",
+        "Capability depth vs. breadth",
+        "Quality over quantity positioning"
+      ],
+      "color_psychology": "Rich colors for our features, muted for competitors",
+      "effectiveness_factors": "Quality visualization, implementation superiority, beyond checkbox comparison"
+    },
+    {
+      "template_id": "comparison_table_03",
+      "template_name": "Competitive Advantage - Price-Value Matrix",
+      "description": "Two-axis chart showing price (horizontal) vs. value/features (vertical), competitors plotted as points, our product in ideal high-value/fair-price quadrant, 'Sweet Spot' indicator on our position, creates visual value perception, 'Best Bang for Buck' positioning",
+      "visual_structure": {
+        "axis_chart": "Price horizontal, value/features vertical",
+        "competitor_dots": "Other products plotted as circles or icons",
+        "our_position": "Highlighted in optimal quadrant (high value, fair price)",
+        "sweet_spot_indicator": "Circle or star around our position",
+        "quadrant_labels": "'Overpriced', 'Best Value', 'Budget', 'Limited'",
+        "headline": "'The Clear Value Leader' or 'Best Value Position'",
+        "cta": "'Get the Best Value'"
+      },
+      "best_for": [
+        "Value positioning against premium competitors",
+        "Mid-market sweet spot products",
+        "Feature-rich affordable options",
+        "Price-performance leaders",
+        "Best-value category positioning"
+      ],
+      "color_psychology": "Green for our position, gray for competitors, visual heat map possible",
+      "effectiveness_factors": "Visual value perception, rational choice clarity, strategic positioning"
+    },
+    {
+      "template_id": "comparison_table_04",
+      "template_name": "Competitive Advantage - Score Card",
+      "description": "Report card or score card aesthetic, multiple comparison categories rated 1-5 stars or 1-10 scores, total score summed at bottom, our product has highest total, creates objective authority, 'Independent Comparison' or 'Rated #1' headline, data source cited for credibility",
+      "visual_structure": {
+        "scorecard_layout": "Vertical list of rating categories",
+        "star_ratings": "1-5 star visual for each category per product",
+        "category_labels": "Features, Support, Price, Ease of Use, etc.",
+        "total_score": "Bottom sum, our product highest",
+        "products_compared": "3-4 products in columns",
+        "headline": "'Highest Rated Solution' or '#1 in Our Category'",
+        "source_citation": "'According to [Authority]' for credibility",
+        "cta": "'Choose the #1 Rated Option'"
+      },
+      "best_for": [
+        "Award-winning products",
+        "Review-aggregated comparisons",
+        "Third-party tested products",
+        "Certified best-in-class offerings",
+        "Objectively measured superiority"
+      ],
+      "color_psychology": "Gold stars for high ratings, gray for low, professional palette",
+      "effectiveness_factors": "Objective authority, third-party validation, comprehensive evaluation"
+    },
+    {
+      "template_id": "ugc_authenticity_01",
+      "template_name": "UGC Authenticity Showcase - Photo Collage",
+      "description": "Collage of 4-6 real customer photos in irregular grid, polaroid-style frames, authentic unpolished aesthetic, handwritten-style fonts for captions, social media UI elements, brand hashtag prominent, 'Real Customers, Real Results' headline, diversity in customer representation, CTA to join community",
+      "visual_structure": {
+        "photo_collage": "4-6 customer photos, varying sizes, rotated frames",
+        "frame_style": "Polaroid or Instagram borders with shadows",
+        "captions": "Handwritten font, short authentic quotes",
+        "social_elements": "Heart icons, comment bubbles, share counts",
+        "headline": "Top, emphasizing authenticity",
+        "hashtag": "Branded hashtag, prominent",
+        "diversity": "Varied demographics",
+        "cta": "'Join Happy Customers' or 'Share Your Story'"
+      },
+      "best_for": [
+        "Beauty and cosmetics",
+        "Fitness programs",
+        "Fashion and apparel",
+        "Food and beverage",
+        "Travel experiences"
+      ],
+      "color_psychology": "Natural, unfiltered colors maintaining authenticity",
+      "effectiveness_factors": "Authenticity, relatability, community feeling, trust"
+    },
+    {
+      "template_id": "ugc_authenticity_02",
+      "template_name": "UGC Authenticity - Social Media Feed",
+      "description": "Designed to look like scrolling through social media feed, multiple posts from different users about product, real usernames (or anonymized realistic ones), timestamps, like/comment counts, mix of photos and short text posts, 'What People Are Saying' headline, authentic social proof at scale",
+      "visual_structure": {
+        "feed_layout": "Vertical scrolling feed aesthetic",
+        "post_cards": "4-6 social media post-style cards",
+        "user_profiles": "Small profile photos, usernames, timestamps",
+        "engagement_metrics": "Like counts, comments indicators",
+        "content_mix": "Photos, text posts, short reviews",
+        "headline": "'See What Customers Are Posting'",
+        "platform_aesthetic": "Instagram/Twitter/TikTok visual style",
+        "cta": "'Join the Conversation'"
+      },
+      "best_for": [
+        "Social-first brands",
+        "Products with strong organic social presence",
+        "Community-driven platforms",
+        "Viral or trending products",
+        "Hashtag campaign results",
+        "Influencer partnership showcases"
+      ],
+      "color_psychology": "Platform-authentic colors (Instagram gradients, Twitter blues)",
+      "effectiveness_factors": "Social proof volume, platform authenticity, real user voices"
+    },
+    {
+      "template_id": "ugc_authenticity_03",
+      "template_name": "UGC Authenticity - Rating Screenshot",
+      "description": "Looks like screenshot from review platform or app store, shows 5-star rating prominently, real review excerpts visible, usernames and verified purchase badges, scrollbar suggesting many more reviews exist, 'See What Buyers Say' headline, creates review platform credibility",
+      "visual_structure": {
+        "screenshot_aesthetic": "Realistic review platform UI",
+        "star_rating": "Large 5-star display at top",
+        "review_excerpts": "3-4 real (or realistic) reviews visible",
+        "verified_badges": "Verified purchase checkmarks",
+        "username_timestamps": "Realistic user info and dates",
+        "scrollbar": "Suggesting more content below",
+        "headline": "'Real Reviews from Real Buyers'",
+        "platform_branding": "Trustpilot, Google, Amazon-style UI"
+      },
+      "best_for": [
+        "E-commerce products",
+        "Apps with store ratings",
+        "Services with review platform presence",
+        "Products sold through major marketplaces",
+        "Review-heavy purchase decisions"
+      ],
+      "color_psychology": "Platform-specific brand colors for authenticity",
+      "effectiveness_factors": "Platform credibility transfer, verified purchase trust, volume indication"
+    },
+    {
+      "template_id": "ugc_authenticity_04",
+      "template_name": "UGC Authenticity - Video Testimonial Thumbnails",
+      "description": "Grid of video testimonial thumbnails with play buttons, real customers mid-speech in freeze frames, video length indicators, view counts on videos, 'Watch Real Stories' headline, suggests authentic video content library, creates multi-media trust",
+      "visual_structure": {
+        "video_grid": "2x2 or 2x3 grid of video thumbnails",
+        "play_buttons": "Centered play icons on each thumbnail",
+        "customer_frames": "Real people mid-testimonial, authentic moments",
+        "video_lengths": "Duration stamps (1:32, 2:15, etc.)",
+        "view_counts": "Views shown on each video",
+        "headline": "'Hear From Real Customers' or 'Watch Their Stories'",
+        "platform_style": "YouTube or video platform aesthetic",
+        "cta": "'Watch More Stories' or 'See All Testimonials'"
+      },
+      "best_for": [
+        "Video-first testimonial campaigns",
+        "Products with transformation stories",
+        "High-consideration purchases",
+        "Services with detailed success stories",
+        "Community-driven content libraries"
+      ],
+      "color_psychology": "Video platform authentic colors, dark UI typical of video players",
+      "effectiveness_factors": "Video credibility, authentic moments captured, content volume suggestion"
+    },
+    {
+      "template_id": "ugc_authenticity_05",
+      "template_name": "UGC Authenticity - Customer Gallery Wall",
+      "description": "Gallery wall aesthetic with customer photos in frames, museum or art gallery visual metaphor, 'Our Customers' Gallery' headline, celebrates customers as art/subjects, each photo labeled with customer name and location, creates community celebration, inclusive diverse representation",
+      "visual_structure": {
+        "gallery_wall": "Multiple frames arranged on wall like art gallery",
+        "customer_photos": "Real customer images in elegant frames",
+        "frame_variety": "Different frame styles and sizes creating visual interest",
+        "name_plaques": "Small labels under each with name and location",
+        "headline": "'Meet Our Community' or 'Celebrating Our Customers'",
+        "gallery_aesthetic": "Museum-quality presentation",
+        "diversity": "Wide range of customer types represented",
+        "cta": "'Become Part of Our Story'"
+      },
+      "best_for": [
+        "Community-centric brands",
+        "Customer celebration campaigns",
+        "Inclusive brand positioning",
+        "Membership communities",
+        "Customer loyalty programs",
+        "People-first brand messaging"
+      ],
+      "color_psychology": "Gallery whites and neutrals, customer authenticity in photos",
+      "effectiveness_factors": "Customer celebration, community belonging, inclusive representation"
+    },
+    {
+      "template_id": "how_it_works_01",
+      "template_name": "3-Step Process Visual - Horizontal Flow",
+      "description": "Three numbered circular icons in horizontal row (each 120-150px), connecting arrows or dotted line between them, simple illustration or icon in each circle, step number bold and large, step title below each icon, one-line description under each title, product result visual at end or bottom, 'Get Started' CTA",
+      "visual_structure": {
+        "step_circles": "Three equal circles, 120-150px diameter",
+        "numbering": "Large numbers inside circles, 48-60pt",
+        "icons": "Simple illustrations representing each step",
+        "connectors": "Arrows or dotted lines between circles",
+        "step_titles": "Below circles, 20-24pt bold, 2-4 words",
+        "descriptions": "Under titles, 12-14pt, single line",
+        "result_visual": "End of sequence showing outcome",
+        "cta": "Bottom center, 'Start Now'"
+      },
+      "best_for": [
+        "Onboarding flows",
+        "Service delivery process",
+        "E-commerce checkout",
+        "Subscription sign-up",
+        "Complex products needing explanation"
+      ],
+      "color_psychology": "Progressive color intensity or single brand color",
+      "effectiveness_factors": "Complexity reduction, clear expectations, friction removal"
+    },
+    {
+      "template_id": "how_it_works_02",
+      "template_name": "How It Works - Vertical Timeline",
+      "description": "Vertical timeline down left or center of canvas, steps descending chronologically, each step has icon, title, description, and potentially mini screenshot, timeline connector line with nodes at each step, 'Your Journey' or 'How to Get Started' headline, creates guided path visual",
+      "visual_structure": {
+        "vertical_line": "Timeline running vertically, left third or center",
+        "step_nodes": "4-6 circular nodes on timeline",
+        "step_content": "Right of timeline: icon, title, description",
+        "mini_visuals": "Small screenshots or illustrations per step",
+        "timeline_progression": "Top to bottom, start to finish",
+        "headline": "'Your Journey Starts Here'",
+        "endpoint": "Bottom shows result or success state",
+        "cta": "Bottom, 'Begin Your Journey'"
+      },
+      "best_for": [
+        "Multi-step programs",
+        "Progressive learning platforms",
+        "Transformation journeys",
+        "Onboarding with clear stages",
+        "Process-oriented services",
+        "Milestone-based programs"
+      ],
+      "color_psychology": "Progressive color saturation down timeline",
+      "effectiveness_factors": "Journey visualization, clear progression, milestone clarity"
+    }
+  ]
+}
