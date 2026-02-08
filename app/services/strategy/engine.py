@@ -283,67 +283,57 @@ async def generate_campaign_strategy(
                 num_variants=product_variants,
             )
 
-        # Resolve image URLs: product can have multiple images
-        # Each image gets its own set of template variants
-        product_image_urls: List[str] = []
-        if getattr(prod, "image_urls", None):
-            product_image_urls = [u for u in prod.image_urls if u]
-        if not product_image_urls and getattr(prod, "image_url", None):
-            product_image_urls = [prod.image_url]
-        if not product_image_urls:
-            product_image_urls = [""]  # Will fall back to product_image_url
+        # Resolve the single image URL for static ads
+        product_image_url_for_static = getattr(prod, "image_url", None) or ""
 
         static_ad_variants: List[StaticAdVariantPlan] = []
-        variant_counter = 0
-        for img_idx, image_url_val in enumerate(product_image_urls):
-            for vi in range(product_variants):
-                variant_counter += 1
-                angle = angles[vi % len(angles)]
-                sa_template = static_ad_templates[vi] if vi < len(static_ad_templates) else None
-                tpl_category = sa_template.category if sa_template else "hero_product_showcase"
+        for vi in range(product_variants):
+            angle = angles[vi % len(angles)]
+            sa_template = static_ad_templates[vi] if vi < len(static_ad_templates) else None
+            tpl_category = sa_template.category if sa_template else "hero_product_showcase"
 
-                # Use AI static copy if available, else smart deterministic
-                if ai_static_copies and vi < len(ai_static_copies):
-                    sa_copy = ai_static_copies[vi]
-                    headline = sa_copy.headline
-                    subheading = sa_copy.subheading
-                    cta = sa_copy.cta_text
-                    body_text = sa_copy.body_text
-                else:
-                    sa_copy = generate_static_ad_copy_deterministic(
-                        product_name=prod.product_name,
-                        product_description=prod.product_description,
-                        product_category=prod.product_category,
-                        product_features=prod.product_features,
-                        price=prod.price,
-                        tags=prod.tags,
-                        brand_name=brand.brand_name,
-                        campaign_goal=goal.value,
-                        message_angle=angle.value,
-                        template_category=tpl_category,
-                        trending_keywords=market.trending_keywords,
-                        target_age_min=market.target_audience_age_min,
-                        target_age_max=market.target_audience_age_max,
-                        target_gender=market.target_audience_gender,
-                        variant_idx=vi,
-                    )
-                    headline = sa_copy.headline
-                    subheading = sa_copy.subheading
-                    cta = sa_copy.cta_text
-                    body_text = sa_copy.body_text
-
-                static_ad_variants.append(StaticAdVariantPlan(
-                    variant_id=variant_counter,
-                    variant_type=VARIANT_TYPES[vi % len(VARIANT_TYPES)].value,
+            # Use AI static copy if available, else smart deterministic
+            if ai_static_copies and vi < len(ai_static_copies):
+                sa_copy = ai_static_copies[vi]
+                headline = sa_copy.headline
+                subheading = sa_copy.subheading
+                cta = sa_copy.cta_text
+                body_text = sa_copy.body_text
+            else:
+                sa_copy = generate_static_ad_copy_deterministic(
+                    product_name=prod.product_name,
+                    product_description=prod.product_description,
+                    product_category=prod.product_category,
+                    product_features=prod.product_features,
+                    price=prod.price,
+                    tags=prod.tags,
+                    brand_name=brand.brand_name,
+                    campaign_goal=goal.value,
                     message_angle=angle.value,
-                    headline=headline,
-                    subheading=subheading,
-                    cta_text=cta,
-                    body_text=body_text,
-                    static_template_id=sa_template.template_id if sa_template else "",
-                    static_template_name=sa_template.template_name if sa_template else "",
-                    image_url=image_url_val,
-                ))
+                    template_category=tpl_category,
+                    trending_keywords=market.trending_keywords,
+                    target_age_min=market.target_audience_age_min,
+                    target_age_max=market.target_audience_age_max,
+                    target_gender=market.target_audience_gender,
+                    variant_idx=vi,
+                )
+                headline = sa_copy.headline
+                subheading = sa_copy.subheading
+                cta = sa_copy.cta_text
+                body_text = sa_copy.body_text
+
+            static_ad_variants.append(StaticAdVariantPlan(
+                variant_id=vi + 1,
+                variant_type=VARIANT_TYPES[vi % len(VARIANT_TYPES)].value,
+                message_angle=angle.value,
+                headline=headline,
+                subheading=subheading,
+                cta_text=cta,
+                body_text=body_text,
+                static_template_id=sa_template.template_id if sa_template else "",
+                static_template_name=sa_template.template_name if sa_template else "",
+                image_url=product_image_url_for_static,
+            ))
 
         product_plans.append(ProductCreativePlan(
             product_index=idx,
@@ -468,7 +458,7 @@ async def generate_campaign_strategy(
     )
 
     total_videos = len(products) * product_variants + brand_variants
-    total_static_ads = sum(len(pp.static_ad_variants) for pp in product_plans) + brand_variants
+    total_static_ads = len(products) * product_variants + brand_variants
 
     return CampaignStrategy(
         visual_style=visual_style.value,
