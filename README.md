@@ -1,9 +1,9 @@
-# Video Ads Engine
+# Video & Static Ads Engine
 
-A production-grade **Multi-Product Video Ads Generation Engine** that turns product catalogs into complete video advertising campaigns automatically.
+A production-grade **Multi-Product Ad Generation Engine** that turns product catalogs into complete video and static image advertising campaigns automatically.
 
 **Input**: Brand identity + Market research + Product images (1 to 100+)
-**Output**: Product-specific videos (N x 3 variants) + General brand videos (3 variants), exported for every social platform.
+**Output**: Product-specific videos (N x 3 variants) + General brand videos (3 variants) + **Static ad images (N x 3 variants) + General brand static ads (3 variants)**, exported for every social platform.
 
 ---
 
@@ -67,7 +67,7 @@ A production-grade **Multi-Product Video Ads Generation Engine** that turns prod
    └─────────────────────┘
 ```
 
-**Tech Stack**: Python 3.10+ · FastAPI · PostgreSQL · FFmpeg · SDXL · AnimateDiff · Docker
+**Tech Stack**: Python 3.10+ · FastAPI · PostgreSQL · Pillow · FFmpeg · SDXL · AnimateDiff · Docker
 **Optional**: Redis · Celery (for distributed workers) · S3 (for cloud storage)
 
 ---
@@ -133,6 +133,8 @@ docker compose exec api python scripts/seed_templates.py
 
 ### 5. Create your first campaign
 
+The same API call generates both **video ads** and **static ad images** automatically.
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/campaigns \
   -H "X-API-Key: my-api-key" \
@@ -153,14 +155,27 @@ curl -X POST http://localhost:8000/api/v1/campaigns \
       "sentiment": "positive"
     },
     "products": [
-      {"product_name": "Vitamin C Serum", "product_image_url": "https://placehold.co/1024x1024/png", "product_category": "skincare", "tags": {"is_new": true}},
-      {"product_name": "Moisturizer", "product_image_url": "https://placehold.co/1024x1024/png", "product_category": "skincare", "tags": {"is_bestseller": true}}
+      {
+        "product_name": "Vitamin C Serum",
+        "product_image_url": "https://placehold.co/1024x1024/png",
+        "product_category": "skincare",
+        "tags": {"is_new": true},
+        "image_url": "https://example.com/serum-lifestyle.jpg"
+      },
+      {
+        "product_name": "Moisturizer",
+        "product_image_url": "https://placehold.co/1024x1024/png",
+        "product_category": "skincare",
+        "tags": {"is_bestseller": true}
+      }
     ],
     "campaign_goal": "awareness",
     "platforms": ["instagram_feed", "tiktok"],
     "duration_preference": 15
   }'
 ```
+
+**Static Ad Image Support**: Each product can include an optional `image_url` field. When provided, this image is used as the hero image in static ad templates instead of the product image. If not provided, the `product_image_url` is used automatically.
 
 ### 6. Poll progress
 
@@ -169,11 +184,78 @@ curl http://localhost:8000/api/v1/campaigns/{CAMPAIGN_ID}/status \
   -H "X-API-Key: my-api-key"
 ```
 
+The status response now includes static ad progress:
+
+```json
+{
+  "campaign_id": "...",
+  "status": "generating",
+  "overall_progress": 45.0,
+  "total_videos": 9,
+  "completed_videos": 4,
+  "total_static_ads": 9,
+  "completed_static_ads": 6,
+  "static_ads": [
+    {
+      "ad_id": "...",
+      "ad_type": "product_specific",
+      "product_name": "Vitamin C Serum",
+      "variant_id": 1,
+      "status": "completed",
+      "quality_score": 90.0
+    }
+  ]
+}
+```
+
 ### 7. Get results
 
 ```bash
 curl http://localhost:8000/api/v1/campaigns/{CAMPAIGN_ID}/results \
   -H "X-API-Key: my-api-key"
+```
+
+The results response includes both videos and static ads:
+
+```json
+{
+  "campaign_id": "...",
+  "campaign_name": "Summer Launch",
+  "status": "completed",
+  "products": [...],
+  "videos": [...],
+  "static_ads": [
+    {
+      "ad_id": "uuid",
+      "ad_type": "product_specific",
+      "product_name": "Vitamin C Serum",
+      "variant_id": 1,
+      "variant_type": "variant_a",
+      "message_angle": "benefit",
+      "headline": "Radiant Skin Starts Here",
+      "subheading": "Vitamin C infused for natural glow",
+      "cta_text": "Discover Now",
+      "static_template_id": "hero_product_showcase_01",
+      "static_template_name": "Classic Hero Product - Right Aligned",
+      "status": "completed",
+      "quality_score": 90.0,
+      "file_path": "campaign_xxx/static_ads/product_specific/variant_1_benefit/static_ad_v1_hero_product_showcase_01.png",
+      "thumbnail_path": "campaign_xxx/static_ads/product_specific/variant_1_benefit/thumb_static_ad_v1_hero_product_showcase_01.png",
+      "file_size_mb": 0.45,
+      "width": 1080,
+      "height": 1080
+    }
+  ],
+  "summary": {
+    "total_products": 2,
+    "total_videos": 9,
+    "completed_videos": 9,
+    "total_static_ads": 9,
+    "completed_static_ads": 9,
+    "average_quality_score": 92.5,
+    "platforms": ["instagram_feed", "tiktok"]
+  }
+}
 ```
 
 ### Service URLs
@@ -262,12 +344,13 @@ All endpoints require authentication via either:
   "products": [
     {
       "product_name": "string (required)",
-      "product_image_url": "string (required)",
+      "product_image_url": "string (required, used for videos + fallback for static ads)",
       "product_description": "string (optional)",
       "product_category": "string (optional)",
       "product_features": {"key": "value"},
       "price": 0.00,
-      "tags": {"is_new": false, "is_bestseller": false}
+      "tags": {"is_new": false, "is_bestseller": false},
+      "image_url": "string (optional, hero image for static ads)"
     }
   ],
 
@@ -384,6 +467,10 @@ See `docs/examples/integration_guide.py` for a complete runnable Python example 
 │   │   │   └── processor.py     # Image download, bg removal, upscale
 │   │   ├── video/
 │   │   │   └── generator.py     # Video creation (FFmpeg + AI)
+│   │   ├── static_ad/
+│   │   │   ├── template_registry.py  # Load/manage static ad templates
+│   │   │   ├── template_selector.py  # Score + select templates for campaign
+│   │   │   └── generator.py          # Generate static ad images (Pillow)
 │   │   ├── export/
 │   │   │   └── encoder.py       # Platform-specific encoding
 │   │   ├── qa/
@@ -459,6 +546,7 @@ When a campaign is created, the **Strategy Engine** makes every creative decisio
 - **Product tags** → Primary message ("Just Dropped", "Fan Favorite", etc.)
 - **Goal** → CTA text ("Shop Now", "Discover", "Visit Site")
 - **Product count** → Layout type for brand videos (carousel, grid, hero+supporting)
+- **Goal + Industry + Category** → Static ad template selection (hero showcase, benefit grid, testimonial, etc.)
 
 ### 2. Video Generation Pipeline
 
@@ -469,10 +557,44 @@ For each video variant, the pipeline runs:
 3. **QA**: Probe video → Check resolution, duration, FPS, codec, file size, clarity → Score 0-100
 4. **Export**: Encode for each platform (Instagram 1:1, TikTok 9:16, etc.) → Extract thumbnails → Write metadata
 
-### 3. Parallel Processing
+### 3. Static Ad Generation Pipeline
+
+For each static ad variant, the pipeline runs:
+
+1. **Template Selection**: Score all 50+ templates from `template.json` using campaign goal, message angle, industry, product category, and visual style
+2. **Image Composition**: Using Pillow, compose the ad image following the template's visual structure:
+   - Apply brand colors (primary, secondary, accent, background)
+   - Place product/user-provided image according to template layout
+   - Render headline, subheading, CTA text with proper typography
+   - Add decorative elements (gradients, shapes, badges, dividers)
+   - Apply brand name and logo where specified
+3. **Output**: Save as high-quality PNG (1080x1080) with thumbnail generation
+
+**15 Template Categories** with multiple variants each:
+
+| Category | Templates | Best For |
+|----------|-----------|----------|
+| Hero Product Showcase | 5 | Product launches, e-commerce, premium goods |
+| Benefit Grid | 5 | SaaS features, service offerings, subscriptions |
+| Before/After | 4 | Transformation products, renovation, fitness |
+| Testimonial Trust | 5 | Social proof, B2B, premium services |
+| Urgency/Countdown | 5 | Flash sales, limited offers, enrollment deadlines |
+| Lifestyle Context | 5 | Fashion, travel, fitness, food & beverage |
+| Stat/Impact Dashboard | 5 | B2B SaaS, analytics, financial products |
+| Minimalist Luxury | 5 | Luxury fashion, jewelry, premium cosmetics |
+| Problem-Agitation-Solution | 5 | Pain-point products, cleaning, productivity |
+| Social Proof Carousel | 5 | Enterprise B2B, startups with PR, trending products |
+| Feature Highlight | 5 | SaaS updates, tech products, app features |
+| Seasonal Campaign | 5 | Holiday sales, seasonal promotions, cultural events |
+| Comparison Table | 4 | Competitive positioning, plan comparison |
+| UGC Authenticity | 5 | Community brands, beauty, fitness, food |
+| How It Works | 2 | Onboarding, services, complex products |
+
+### 4. Parallel Processing
 
 - Each product's videos run as an independent Celery task
 - General brand videos run as a separate task
+- Static ads are generated after video processing completes
 - All tasks execute in parallel across available workers
 - Progress tracked in Redis, queryable via status endpoint
 
@@ -499,6 +621,182 @@ The engine supports these open-source AI models (all optional with graceful fall
 # Example: download SDXL
 python -c "from huggingface_hub import snapshot_download; snapshot_download('stabilityai/stable-diffusion-xl-base-1.0', local_dir='./models/stable-diffusion-xl-base-1.0')"
 ```
+
+---
+
+## Using Campaign Data After Update
+
+The campaign API now returns both video ads and static ad images. Here's how to consume the updated data:
+
+### Response Structure
+
+After campaign completion, the results endpoint returns:
+
+```json
+{
+  "videos": [...],        // Video ads (same as before)
+  "static_ads": [...],    // NEW: Static ad images
+  "summary": {
+    "total_videos": 9,
+    "completed_videos": 9,
+    "total_static_ads": 9,     // NEW
+    "completed_static_ads": 9  // NEW
+  }
+}
+```
+
+### Accessing Static Ad Images
+
+Each static ad in the `static_ads` array contains:
+
+| Field | Description |
+|-------|-------------|
+| `file_path` | Relative path to the generated PNG image |
+| `thumbnail_path` | Relative path to a 300x300 thumbnail |
+| `static_template_id` | The template used (e.g. `hero_product_showcase_01`) |
+| `static_template_name` | Human-readable template name |
+| `headline` | The headline text rendered on the image |
+| `subheading` | The subheading text rendered |
+| `cta_text` | The call-to-action text |
+| `width` / `height` | Image dimensions (default 1080x1080) |
+| `ad_type` | `product_specific` or `general_brand` |
+| `image_url` | The user-provided image URL used (if any) |
+
+### Download Static Ads
+
+Static ad images are included in the campaign ZIP download:
+
+```bash
+# Download all campaign assets (videos + static ads)
+curl -O http://localhost:8000/api/v1/campaigns/{CAMPAIGN_ID}/download \
+  -H "X-API-Key: my-api-key"
+```
+
+Static ads are organized in the archive as:
+
+```
+campaign_{id}/
+├── product_specific/          # Video exports
+├── general_brand/             # Video exports
+└── static_ads/                # NEW: Static ad images
+    ├── product_specific/
+    │   ├── variant_1_benefit/
+    │   │   ├── static_ad_v1_hero_product_showcase_01.png
+    │   │   └── thumb_static_ad_v1_hero_product_showcase_01.png
+    │   ├── variant_2_social_proof/
+    │   │   └── ...
+    │   └── variant_3_urgency/
+    │       └── ...
+    └── general_brand/
+        ├── variant_1_benefit/
+        │   └── ...
+        └── ...
+```
+
+### Serving Static Ad Images
+
+Static ad images can be served via the existing assets endpoint:
+
+```bash
+# Serve a static ad image
+GET /api/v1/assets/{file_path}
+```
+
+Where `file_path` is the relative path from the results response.
+
+### Python Integration Example
+
+```python
+import httpx
+
+API = "http://localhost:8000/api/v1"
+HEADERS = {"X-API-Key": "my-key"}
+
+# Get results
+results = httpx.get(f"{API}/campaigns/{campaign_id}/results", headers=HEADERS).json()
+
+# Process video ads (same as before)
+for video in results["videos"]:
+    print(f"Video: {video['video_type']} - {video['status']}")
+    print(f"  File: {video['file_path']}")
+
+# Process static ads (NEW)
+for ad in results["static_ads"]:
+    print(f"Static Ad: {ad['ad_type']} - {ad['status']}")
+    print(f"  Template: {ad['static_template_name']}")
+    print(f"  Headline: {ad['headline']}")
+    print(f"  File: {ad['file_path']}")
+    print(f"  Size: {ad['width']}x{ad['height']}")
+
+    # Download the static ad image
+    if ad["file_path"]:
+        img_resp = httpx.get(f"{API}/assets/{ad['file_path']}", headers=HEADERS)
+        with open(f"ad_{ad['variant_id']}.png", "wb") as f:
+            f.write(img_resp.content)
+
+# Summary includes both types
+summary = results["summary"]
+print(f"Total videos: {summary['total_videos']}, completed: {summary['completed_videos']}")
+print(f"Total static ads: {summary['total_static_ads']}, completed: {summary['completed_static_ads']}")
+```
+
+### Node.js Integration Example
+
+```javascript
+const API = 'http://localhost:8000/api/v1';
+const headers = { 'X-API-Key': 'my-key' };
+
+const results = await fetch(`${API}/campaigns/${campaignId}/results`, { headers })
+  .then(r => r.json());
+
+// Video ads
+results.videos.forEach(video => {
+  console.log(`Video: ${video.video_type} [${video.status}]`);
+});
+
+// Static ads (NEW)
+results.static_ads.forEach(ad => {
+  console.log(`Static Ad: ${ad.static_template_name}`);
+  console.log(`  Headline: ${ad.headline}`);
+  console.log(`  File: ${ad.file_path}`);
+  console.log(`  Dimensions: ${ad.width}x${ad.height}`);
+});
+
+// Summary
+const { summary } = results;
+console.log(`Videos: ${summary.completed_videos}/${summary.total_videos}`);
+console.log(`Static Ads: ${summary.completed_static_ads}/${summary.total_static_ads}`);
+```
+
+### Using `image_url` for Custom Static Ad Images
+
+You can provide a custom image for each product's static ads using the `image_url` field:
+
+```json
+{
+  "products": [
+    {
+      "product_name": "Vitamin C Serum",
+      "product_image_url": "https://cdn.example.com/serum-product-shot.png",
+      "image_url": "https://cdn.example.com/serum-lifestyle-photo.jpg",
+      "product_category": "skincare"
+    }
+  ]
+}
+```
+
+| Field | Used For | Required |
+|-------|----------|----------|
+| `product_image_url` | Video ads (background removal, compositing) + fallback for static ads | Yes |
+| `image_url` | Static ad hero image (lifestyle shots, marketing photos) | No |
+
+When `image_url` is provided:
+- Static ads use it as the primary image (great for lifestyle/marketing shots)
+- Video ads continue using `product_image_url` (optimized for product isolation)
+
+When `image_url` is **not** provided:
+- Static ads fall back to using `product_image_url`
+- Works perfectly with product-on-white-background shots
 
 ---
 

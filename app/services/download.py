@@ -117,6 +117,11 @@ def generate_campaign_summary(
     product_specific = [v for v in videos if v.get("video_type") == "product_specific"]
     general_brand = [v for v in videos if v.get("video_type") == "general_brand"]
 
+    # Static ads
+    static_ads = campaign_data.get("static_ads", [])
+    completed_static = [sa for sa in static_ads if sa.get("status") == "completed"]
+    failed_static = [sa for sa in static_ads if sa.get("status") == "failed"]
+
     summary = {
         "campaign_id": campaign_id,
         "campaign_name": campaign_data.get("campaign_name", ""),
@@ -128,6 +133,9 @@ def generate_campaign_summary(
         "completed_videos": len(completed),
         "failed_videos": len(failed),
         "average_quality_score": avg_score,
+        "total_static_ads": len(static_ads),
+        "completed_static_ads": len(completed_static),
+        "failed_static_ads": len(failed_static),
         "platforms": campaign_data.get("platforms", []),
         "campaign_goal": campaign_data.get("campaign_goal", ""),
         "products": [
@@ -149,6 +157,18 @@ def generate_campaign_summary(
                 "duration_seconds": v.get("duration_seconds"),
             }
             for v in videos
+        ],
+        "static_ad_manifest": [
+            {
+                "ad_id": str(sa.get("id", "")),
+                "ad_type": sa.get("ad_type"),
+                "variant_id": sa.get("variant_id"),
+                "static_template_id": sa.get("static_template_id"),
+                "status": sa.get("status"),
+                "quality_score": sa.get("quality_score"),
+                "file_path": sa.get("file_path"),
+            }
+            for sa in static_ads
         ],
     }
 
