@@ -23,6 +23,7 @@ from app.services.export.encoder import PlatformEncoder
 from app.services.qa.validator import QAValidator
 from app.services.static_ad.generator import StaticAdGenerator
 from app.services.static_ad.template_registry import get_template_by_id
+from app.services.static_ad.validator import StaticAdValidator
 from app.services.video.generator import VideoGenerator
 from app.utils.file_utils import (
     brand_variant_dir,
@@ -371,6 +372,7 @@ def process_static_ads(
 
     try:
         generator = StaticAdGenerator(work)
+        qa = StaticAdValidator()
 
         # Build product lookup
         product_map: Dict[str, Dict] = {}
@@ -447,6 +449,13 @@ def process_static_ads(
 
                 fsize = file_size_mb(final_path)
 
+                # Run quality validation
+                qa_result = qa.validate(
+                    final_path,
+                    headline=sa.get("headline", ""),
+                    cta_text=sa.get("cta_text", ""),
+                )
+
                 _update_static_ad_record(
                     ad_id,
                     status="completed",
@@ -455,13 +464,13 @@ def process_static_ads(
                     file_size_mb=fsize,
                     width=1080,
                     height=1080,
-                    quality_score=90.0,  # Static images always pass basic QA
+                    quality_score=qa_result.overall_score,
                 )
                 results.append({
                     "ad_id": ad_id,
                     "status": "completed",
                     "file_path": final_path,
-                    "quality_score": 90.0,
+                    "quality_score": qa_result.overall_score,
                 })
 
             except Exception as exc:

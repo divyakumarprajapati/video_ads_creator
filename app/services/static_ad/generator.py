@@ -232,6 +232,93 @@ def _load_and_fit_image(
         return None
 
 
+def _add_drop_shadow(
+    img: Image.Image,
+    offset: Tuple[int, int] = (8, 8),
+    blur_radius: int = 15,
+    shadow_color: Tuple[int, int, int, int] = (0, 0, 0, 80),
+) -> Image.Image:
+    """Add a soft drop shadow behind a product image for depth."""
+    shadow_size = (
+        img.width + abs(offset[0]) + blur_radius * 2,
+        img.height + abs(offset[1]) + blur_radius * 2,
+    )
+    shadow = Image.new("RGBA", shadow_size, (0, 0, 0, 0))
+    shadow_layer = Image.new("RGBA", img.size, shadow_color)
+    shadow.paste(shadow_layer, (blur_radius + max(0, offset[0]), blur_radius + max(0, offset[1])))
+    try:
+        shadow = shadow.filter(ImageFilter.GaussianBlur(blur_radius))
+    except Exception:
+        pass
+
+    # Composite: shadow + original
+    result = Image.new("RGBA", shadow_size, (0, 0, 0, 0))
+    result = Image.alpha_composite(result, shadow)
+    paste_x = blur_radius + max(0, -offset[0])
+    paste_y = blur_radius + max(0, -offset[1])
+    result.paste(img, (paste_x, paste_y), img if img.mode == "RGBA" else None)
+    return result
+
+
+def _draw_text_with_shadow(
+    draw: ImageDraw.ImageDraw,
+    position: Tuple[int, int],
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    fill: Tuple[int, ...],
+    shadow_color: Tuple[int, ...] = (0, 0, 0, 60),
+    shadow_offset: int = 2,
+) -> None:
+    """Draw text with a subtle shadow for readability over images."""
+    x, y = position
+    # Shadow
+    draw.text((x + shadow_offset, y + shadow_offset), text,
+              fill=shadow_color[:3], font=font)
+    # Main text
+    draw.text((x, y), text, fill=fill, font=font)
+
+
+def _draw_radial_gradient(
+    img: Image.Image,
+    center: Tuple[int, int],
+    radius: int,
+    color_center: Tuple[int, int, int],
+    color_edge: Tuple[int, int, int],
+) -> None:
+    """Draw a radial gradient emanating from center."""
+    for y in range(max(0, center[1] - radius), min(img.height, center[1] + radius)):
+        for x in range(max(0, center[0] - radius), min(img.width, center[0] + radius)):
+            dist = math.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            if dist > radius:
+                continue
+            ratio = dist / radius
+            r = int(color_center[0] + (color_edge[0] - color_center[0]) * ratio)
+            g = int(color_center[1] + (color_edge[1] - color_center[1]) * ratio)
+            b = int(color_center[2] + (color_edge[2] - color_center[2]) * ratio)
+            img.putpixel((x, y), (r, g, b))
+
+
+def _apply_subtle_texture(img: Image.Image, intensity: float = 0.03) -> Image.Image:
+    """Add subtle noise texture for a premium printed feel."""
+    import random
+    pixels = img.load()
+    w, h = img.size
+    noise_range = int(255 * intensity)
+    for y in range(0, h, 2):  # Skip every other pixel for performance
+        for x in range(0, w, 2):
+            try:
+                r, g, b = pixels[x, y][:3]
+                n = random.randint(-noise_range, noise_range)
+                pixels[x, y] = (
+                    max(0, min(255, r + n)),
+                    max(0, min(255, g + n)),
+                    max(0, min(255, b + n)),
+                )
+            except (IndexError, TypeError):
+                pass
+    return img
+
+
 # ────────────────────────────────────────────────────────────
 #  Static Ad Generator
 # ────────────────────────────────────────────────────────────
@@ -438,60 +525,85 @@ class StaticAdGenerator:
         brand_name, logo_url, img_source,
     ) -> Image.Image:
         """Hero product layout: product on one side, text on the other."""
-        img = Image.new("RGB", (w, h), bg)
+        img = Image.new("RGBA", (w, h), bg + (255,))
 
-        # Gradient left side
-        _draw_gradient_rect(img, (0, 0, w // 2, h), _darken(primary, 0.9), primary)
+        # Left side: rich gradient with subtle secondary blend
+        _draw_gradient_rect(img, (0, 0, int(w * 0.45), h), _darken(primary, 0.85), primary)
 
-        # Right side: lighter background
+        # Soft transition zone between sides
         draw = ImageDraw.Draw(img)
-        draw.rectangle([(w // 2, 0), (w, h)], fill=_lighten(bg, 0.1))
+        trans_start = int(w * 0.43)
+        trans_end = int(w * 0.50)
+        for x in range(trans_start, trans_end):
+            ratio = (x - trans_start) / max(1, trans_end - trans_start)
+            left_r, left_g, left_b = primary
+            right_r, right_g, right_b = _lighten(bg, 0.05)
+            r = int(left_r + (right_r - left_r) * ratio)
+            g = int(left_g + (right_g - left_g) * ratio)
+            b = int(left_b + (right_b - left_b) * ratio)
+            draw.line([(x, 0), (x, h)], fill=(r, g, b))
 
-        # Product image (right 60%)
+        # Right side: clean background
+        draw.rectangle([(trans_end, 0), (w, h)], fill=_lighten(bg, 0.05))
+
+        # Product image with drop shadow (right 55%)
         if img_source:
-            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.55), int(h * 0.75)), "hero_prod")
+            prod_img = _load_and_fit_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod")
             if prod_img:
-                px = w // 2 + (w // 2 - prod_img.width) // 2
-                py = (h - prod_img.height) // 2
-                img.paste(prod_img, (px, py), prod_img if prod_img.mode == "RGBA" else None)
+                prod_with_shadow = _add_drop_shadow(prod_img, offset=(6, 6), blur_radius=12)
+                px = int(w * 0.50) + (int(w * 0.50) - prod_with_shadow.width) // 2
+                py = (h - prod_with_shadow.height) // 2
+                img.paste(prod_with_shadow, (px, py), prod_with_shadow)
 
         # Text on left side
         left_text_color = _contrast_color(primary)
         margin = int(w * 0.05)
-        text_w = w // 2 - margin * 2
+        text_w = int(w * 0.38)
 
-        # Brand name
-        brand_font = _get_font(22, bold=False)
-        y_cursor = int(h * 0.08)
+        # Logo or brand name at top
+        y_cursor = int(h * 0.06)
+        if logo_url:
+            logo_img = _load_and_fit_image(logo_url, self.work_dir, (100, 40), "logo")
+            if logo_img:
+                img.paste(logo_img, (margin, y_cursor), logo_img if logo_img.mode == "RGBA" else None)
+                y_cursor += 50
         if brand_name:
-            draw.text((margin, y_cursor), brand_name.upper(), fill=_with_alpha(left_text_color, 180)[:3], font=brand_font)
-            y_cursor += 40
+            brand_font = _get_font(20, bold=False)
+            _draw_text_with_shadow(draw, (margin, y_cursor), brand_name.upper(),
+                                   brand_font, _lighten(left_text_color, 0.2))
+            y_cursor += 36
+
+        # Decorative accent line
+        draw.rectangle([(margin, y_cursor), (margin + 50, y_cursor + 3)], fill=accent)
+        y_cursor += 24
 
         # Headline
-        head_font = _get_font(min(52, w // 18), bold=True)
-        y_cursor += 20
-        head_h = _draw_text_block(draw, headline, (margin, y_cursor), head_font, left_text_color, text_w, "left", 10)
-        y_cursor += head_h + 20
+        head_font = _get_font(min(48, w // 20), bold=True)
+        head_h = _draw_text_block(draw, headline, (margin, y_cursor), head_font, left_text_color, text_w, "left", 8)
+        y_cursor += head_h + 16
 
         # Subheading
         if subheading:
-            sub_font = _get_font(min(28, w // 32), bold=False)
-            sub_color = _lighten(left_text_color, 0.3) if _luminance(*left_text_color) < 128 else _darken(left_text_color, 0.7)
-            _draw_text_block(draw, subheading, (margin, y_cursor), sub_font, sub_color, text_w, "left", 8)
+            sub_font = _get_font(min(24, w // 36), bold=False)
+            sub_color = _lighten(left_text_color, 0.25) if _luminance(*left_text_color) < 128 else _darken(left_text_color, 0.65)
+            _draw_text_block(draw, subheading, (margin, y_cursor), sub_font, sub_color, text_w, "left", 6)
 
-        # CTA Button
+        # CTA Button with shadow
         if cta:
-            cta_font = _get_font(min(26, w // 36), bold=True)
+            cta_font = _get_font(min(24, w // 38), bold=True)
             cta_w, cta_h = _text_size(draw, cta, cta_font)
-            btn_w = cta_w + 48
+            btn_w = cta_w + 52
             btn_h = cta_h + 28
             btn_x = margin
-            btn_y = h - int(h * 0.12) - btn_h
-            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h), fill=accent, radius=btn_h // 2)
-            btn_text_color = _contrast_color(accent)
-            draw.text((btn_x + 24, btn_y + 14), cta, fill=btn_text_color, font=cta_font)
+            btn_y = h - int(h * 0.10) - btn_h
+            # Button shadow
+            _draw_rounded_rect(draw, (btn_x + 2, btn_y + 2, btn_x + btn_w + 2, btn_y + btn_h + 2),
+                               fill=_darken(accent, 0.5), radius=btn_h // 2)
+            _draw_rounded_rect(draw, (btn_x, btn_y, btn_x + btn_w, btn_y + btn_h),
+                               fill=accent, radius=btn_h // 2)
+            draw.text((btn_x + 26, btn_y + 14), cta, fill=_contrast_color(accent), font=cta_font)
 
-        return img
+        return img.convert("RGB")
 
     # ── Benefit Grid ──────────────────────────────────────
 
