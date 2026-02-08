@@ -350,7 +350,8 @@ All endpoints require authentication via either:
       "product_features": {"key": "value"},
       "price": 0.00,
       "tags": {"is_new": false, "is_bestseller": false},
-      "image_url": "string (optional, hero image for static ads)"
+      "image_url": "string (optional, hero image for static ads)",
+      "image_urls": ["string array (optional, multiple images → ads per image)"]
     }
   ],
 
@@ -788,15 +789,18 @@ You can provide a custom image for each product's static ads using the `image_ur
 | Field | Used For | Required |
 |-------|----------|----------|
 | `product_image_url` | Video ads (background removal, compositing) + fallback for static ads | Yes |
-| `image_url` | Static ad hero image (lifestyle shots, marketing photos) | No |
+| `image_url` | Single static ad hero image (lifestyle shots, marketing photos) | No |
+| `image_urls` | Multiple images - each generates its own set of static ad variants | No |
 
-When `image_url` is provided:
-- Static ads use it as the primary image (great for lifestyle/marketing shots)
-- Video ads continue using `product_image_url` (optimized for product isolation)
+**Multiple images per product**: When `image_urls` is provided with N images, the system generates `N x variants_per_product` static ads (e.g. 3 images x 3 variants = 9 static ads for one product).
 
-When `image_url` is **not** provided:
-- Static ads fall back to using `product_image_url`
-- Works perfectly with product-on-white-background shots
+**Image processing**: All product images are automatically processed:
+1. Background removal (rembg/U2-Net)
+2. Composited onto brand-colored gradient backgrounds
+3. Centered with proper padding (72% canvas coverage)
+4. Clean RGBA compositing into template layouts
+
+This means even raw product photos on messy backgrounds become clean, brand-themed ad visuals.
 
 ---
 
