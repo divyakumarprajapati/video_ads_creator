@@ -23,6 +23,8 @@ from app.core.enums import (
     MessageAngle,
     Platform,
     ProductGenerationStatus,
+    StaticAdStatus,
+    StaticAdType,
     VariantType,
     VideoStatus,
     VideoType,
@@ -32,6 +34,7 @@ from app.models.campaign import (
     Campaign,
     CampaignPlatformExport,
     CampaignProduct,
+    CampaignStaticAd,
     CampaignVideo,
 )
 from app.schemas.brand import BrandIdentity, MarketResearch
@@ -42,6 +45,8 @@ from app.schemas.campaign import (
     CampaignStatusOut,
     PlatformExportOut,
     ProductInput,
+    StaticAdResultOut,
+    StaticAdStatusItem,
     VideoResultOut,
     VideoStatusItem,
 )
@@ -162,11 +167,56 @@ class CampaignService:
                 self.db.add(vm)
                 video_models.append(vm)
 
+        # 5b. Create static ad records for product-specific static ads
+        static_ad_models: List[CampaignStaticAd] = []
+        for plan, prod_model, prod_input in zip(strategy.product_plans, product_models, payload.products):
+            for sa_var in plan.static_ad_variants:
+                sa = CampaignStaticAd(
+                    campaign_id=campaign.id,
+                    product_id=prod_model.id,
+                    ad_type=StaticAdType.PRODUCT_SPECIFIC,
+                    variant_id=sa_var.variant_id,
+                    variant_type=VariantType(sa_var.variant_type),
+                    message_angle=MessageAngle(sa_var.message_angle),
+                    static_template_id=sa_var.static_template_id,
+                    static_template_name=sa_var.static_template_name,
+                    headline=sa_var.headline,
+                    subheading=sa_var.subheading,
+                    cta_text=sa_var.cta_text,
+                    body_text=sa_var.body_text,
+                    image_url=sa_var.image_url or getattr(prod_input, "image_url", None) or "",
+                )
+                self.db.add(sa)
+                static_ad_models.append(sa)
+
+        # 5c. Create static ad records for general-brand static ads
+        if strategy.brand_plan:
+            bp = strategy.brand_plan
+            for sa_var in bp.static_ad_variants:
+                sa = CampaignStaticAd(
+                    campaign_id=campaign.id,
+                    product_id=None,
+                    ad_type=StaticAdType.GENERAL_BRAND,
+                    variant_id=sa_var.variant_id,
+                    variant_type=VariantType(sa_var.variant_type),
+                    message_angle=MessageAngle(sa_var.message_angle),
+                    static_template_id=sa_var.static_template_id,
+                    static_template_name=sa_var.static_template_name,
+                    headline=sa_var.headline,
+                    subheading=sa_var.subheading,
+                    cta_text=sa_var.cta_text,
+                    body_text=sa_var.body_text,
+                    image_url="",
+                )
+                self.db.add(sa)
+                static_ad_models.append(sa)
+
         await self.db.flush()
 
         # 6. Update campaign status to "generating" with ETA
         campaign.status = CampaignStatus.GENERATING
         total_videos = len(video_models)
+        total_static_ads = len(static_ad_models)
 
         # Estimate completion: ~3 min per product + 3 min for brand videos
         # (conservative; parallel processing makes this faster on multi-GPU)
@@ -188,6 +238,7 @@ class CampaignService:
             campaign_id=str(campaign.id),
             products=len(product_models),
             videos=total_videos,
+            static_ads=total_static_ads,
         )
 
         return CampaignOut(
@@ -204,6 +255,7 @@ class CampaignService:
             estimated_completion=campaign.estimated_completion,
             total_products=len(product_models),
             total_videos=total_videos,
+            total_static_ads=total_static_ads,
             created_at=campaign.created_at,
             updated_at=campaign.updated_at,
         )
@@ -232,6 +284,23 @@ class CampaignService:
         completed = sum(1 for v in videos if v.status == VideoStatus.COMPLETED)
         failed = sum(1 for v in videos if v.status == VideoStatus.FAILED)
 
+        # Static ads status
+        static_ads = campaign.static_ads
+        sa_items = []
+        for sa in static_ads:
+            product_name = sa.product.product_name if sa.product else None
+            sa_items.append(StaticAdStatusItem(
+                ad_id=sa.id,
+                ad_type=sa.ad_type,
+                product_name=product_name,
+                variant_id=sa.variant_id,
+                status=sa.status,
+                quality_score=sa.quality_score,
+            ))
+
+        sa_completed = sum(1 for sa in static_ads if sa.status == StaticAdStatus.COMPLETED)
+        sa_failed = sum(1 for sa in static_ads if sa.status == StaticAdStatus.FAILED)
+
         return CampaignStatusOut(
             campaign_id=campaign.id,
             status=campaign.status,
@@ -241,6 +310,10 @@ class CampaignService:
             completed_videos=completed,
             failed_videos=failed,
             videos=video_items,
+            total_static_ads=len(static_ads),
+            completed_static_ads=sa_completed,
+            failed_static_ads=sa_failed,
+            static_ads=sa_items,
         )
 
     # ── Get results ────────────────────────────────────────
@@ -299,6 +372,36 @@ class CampaignService:
                 metadata=v.extra_metadata,
             ))
 
+        # Static ads results
+        static_ads_out = []
+        for sa in campaign.static_ads:
+            sa_file_rel = to_relative_asset_path(sa.file_path)
+            sa_thumb_rel = to_relative_asset_path(sa.thumbnail_path)
+            static_ads_out.append(StaticAdResultOut(
+                ad_id=sa.id,
+                ad_type=sa.ad_type,
+                product_id=sa.product_id,
+                product_name=sa.product.product_name if sa.product else None,
+                variant_id=sa.variant_id,
+                variant_type=sa.variant_type.value if sa.variant_type else "",
+                message_angle=sa.message_angle.value if sa.message_angle else "",
+                headline=sa.headline,
+                subheading=sa.subheading,
+                cta_text=sa.cta_text,
+                body_text=sa.body_text,
+                image_url=sa.image_url,
+                static_template_id=sa.static_template_id,
+                static_template_name=sa.static_template_name,
+                status=sa.status,
+                quality_score=sa.quality_score,
+                file_path=sa_file_rel,
+                thumbnail_path=sa_thumb_rel,
+                file_size_mb=sa.file_size_mb,
+                width=sa.width,
+                height=sa.height,
+                metadata=sa.extra_metadata,
+            ))
+
         total = len(campaign.videos)
         completed = sum(1 for v in campaign.videos if v.status == VideoStatus.COMPLETED)
         failed = sum(1 for v in campaign.videos if v.status == VideoStatus.FAILED)
@@ -307,6 +410,10 @@ class CampaignService:
         if scored:
             avg_quality = round(sum(scored) / len(scored), 1)
 
+        sa_total = len(campaign.static_ads)
+        sa_completed = sum(1 for sa in campaign.static_ads if sa.status == StaticAdStatus.COMPLETED)
+        sa_failed = sum(1 for sa in campaign.static_ads if sa.status == StaticAdStatus.FAILED)
+
         summary = {
             "total_products": len(campaign.products),
             "total_videos": total,
@@ -314,6 +421,9 @@ class CampaignService:
             "failed_videos": failed,
             "average_quality_score": avg_quality,
             "platforms": campaign.platforms,
+            "total_static_ads": sa_total,
+            "completed_static_ads": sa_completed,
+            "failed_static_ads": sa_failed,
         }
 
         return CampaignResultsOut(
@@ -323,6 +433,7 @@ class CampaignService:
             overall_progress=campaign.overall_progress,
             products=products_out,
             videos=videos_out,
+            static_ads=static_ads_out,
             summary=summary,
         )
 
@@ -387,6 +498,7 @@ class CampaignService:
                 estimated_completion=c.estimated_completion,
                 total_products=len(c.products),
                 total_videos=len(c.videos),
+                total_static_ads=len(c.static_ads),
                 created_at=c.created_at,
                 updated_at=c.updated_at,
             )

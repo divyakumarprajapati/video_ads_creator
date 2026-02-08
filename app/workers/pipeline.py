@@ -21,6 +21,9 @@ from app.core.enums import Platform
 from app.services.asset.processor import AssetProcessor
 from app.services.export.encoder import PlatformEncoder
 from app.services.qa.validator import QAValidator
+from app.services.static_ad.generator import StaticAdGenerator
+from app.services.static_ad.template_registry import get_template_by_id
+from app.services.static_ad.validator import StaticAdValidator
 from app.services.video.generator import VideoGenerator
 from app.utils.file_utils import (
     brand_variant_dir,
@@ -102,6 +105,18 @@ def _insert_platform_export(video_id: str, platform: str, file_path: str,
         conn.commit()
 
 
+def _update_static_ad_record(ad_id: str, **kwargs) -> None:
+    from sqlalchemy import text
+    eng = _sync_engine()
+    sets = ", ".join(f"{k} = :{k}" for k in kwargs)
+    with eng.connect() as conn:
+        conn.execute(
+            text(f"UPDATE campaign_static_ads SET {sets}, updated_at = now() WHERE id = :aid"),
+            {"aid": ad_id, **kwargs},
+        )
+        conn.commit()
+
+
 def _get_campaign_data(campaign_id: str) -> Dict[str, Any]:
     from sqlalchemy import text
     eng = _sync_engine()
@@ -120,8 +135,13 @@ def _get_campaign_data(campaign_id: str) -> Dict[str, Any]:
             text("SELECT * FROM campaign_videos WHERE campaign_id = :cid ORDER BY created_at"),
             {"cid": campaign_id},
         ).mappings().all()]
+        static_ads = [dict(r) for r in conn.execute(
+            text("SELECT * FROM campaign_static_ads WHERE campaign_id = :cid ORDER BY created_at"),
+            {"cid": campaign_id},
+        ).mappings().all()]
     campaign["products"] = products
     campaign["videos"] = videos
+    campaign["static_ads"] = static_ads
     return campaign
 
 
@@ -331,6 +351,166 @@ def process_brand_videos(
 
 
 # ────────────────────────────────────────────────────────────
+#  Pipeline: process static ads
+# ────────────────────────────────────────────────────────────
+
+def process_static_ads(
+    campaign_id: str,
+    static_ad_records: List[Dict],
+    brand_identity: Dict,
+    products: List[Dict],
+) -> Dict:
+    """
+    Generate static ad images for all static ad records in the campaign.
+
+    Each record references a template from template.json and contains
+    messaging text.  The generator composes the final image using brand
+    colors, product images, and the template layout.
+    """
+    cid = campaign_id
+    work = tmp_dir(prefix="static_ads_")
+
+    try:
+        generator = StaticAdGenerator(work)
+        qa = StaticAdValidator()
+
+        # Build product lookup
+        product_map: Dict[str, Dict] = {}
+        for prod in products:
+            product_map[str(prod["id"])] = prod
+
+        brand_colors = brand_identity.get("colors", {})
+        brand_name = brand_identity.get("brand_name", "")
+        logo_url = brand_identity.get("logo_url")
+
+        results = []
+        for sa in static_ad_records:
+            ad_id = str(sa["id"])
+            template_id = sa.get("static_template_id", "")
+
+            try:
+                _update_static_ad_record(ad_id, status="generating")
+
+                # Look up the template
+                template = get_template_by_id(template_id) if template_id else None
+                if not template:
+                    # Select a fallback template
+                    from app.services.static_ad.template_registry import get_all_templates
+                    all_tpls = get_all_templates()
+                    template = all_tpls[0] if all_tpls else None
+
+                if not template:
+                    logger.warning("No static ad templates available, skipping ad %s", ad_id)
+                    _update_static_ad_record(ad_id, status="failed")
+                    results.append({"ad_id": ad_id, "status": "failed"})
+                    continue
+
+                # Resolve product image
+                product_image_url = ""
+                image_url = sa.get("image_url", "")
+                product_id = sa.get("product_id")
+                if product_id and str(product_id) in product_map:
+                    prod = product_map[str(product_id)]
+                    product_image_url = prod.get("product_image_url", "")
+
+                # Generate the static ad image
+                output_path = generator.generate(
+                    template=template,
+                    headline=sa.get("headline", ""),
+                    subheading=sa.get("subheading", ""),
+                    cta_text=sa.get("cta_text", ""),
+                    body_text=sa.get("body_text", ""),
+                    brand_colors=brand_colors,
+                    brand_name=brand_name,
+                    logo_url=logo_url,
+                    product_image_url=product_image_url,
+                    image_url=image_url if image_url else None,
+                    width=1080,
+                    height=1080,
+                    variant_id=sa.get("variant_id", 1),
+                )
+
+                # Copy to campaign output directory
+                out_dir = _static_ad_output_dir(cid, sa)
+                ensure_dir(out_dir)
+                final_path = os.path.join(out_dir, os.path.basename(output_path))
+                if not os.path.exists(final_path):
+                    shutil.copy2(output_path, final_path)
+
+                # Create a thumbnail (smaller version)
+                thumb_path = os.path.join(out_dir, f"thumb_{os.path.basename(output_path)}")
+                try:
+                    from PIL import Image as PILImage
+                    thumb = PILImage.open(final_path)
+                    thumb.thumbnail((300, 300), PILImage.LANCZOS)
+                    thumb.save(thumb_path, quality=85)
+                except Exception:
+                    thumb_path = final_path
+
+                fsize = file_size_mb(final_path)
+
+                # Run quality validation
+                qa_result = qa.validate(
+                    final_path,
+                    headline=sa.get("headline", ""),
+                    cta_text=sa.get("cta_text", ""),
+                )
+
+                _update_static_ad_record(
+                    ad_id,
+                    status="completed",
+                    file_path=final_path,
+                    thumbnail_path=thumb_path,
+                    file_size_mb=fsize,
+                    width=1080,
+                    height=1080,
+                    quality_score=qa_result.overall_score,
+                )
+                results.append({
+                    "ad_id": ad_id,
+                    "status": "completed",
+                    "file_path": final_path,
+                    "quality_score": qa_result.overall_score,
+                })
+
+            except Exception as exc:
+                logger.error("Static ad generation failed for %s: %s", ad_id, exc)
+                _update_static_ad_record(ad_id, status="failed")
+                results.append({"ad_id": ad_id, "status": "failed"})
+
+        return {"campaign_id": cid, "static_ads": results}
+
+    except Exception as exc:
+        logger.error("Static ads processing failed: %s", traceback.format_exc())
+        for sa in static_ad_records:
+            _update_static_ad_record(str(sa["id"]), status="failed")
+        raise
+
+
+def _static_ad_output_dir(campaign_id: str, static_ad: Dict) -> str:
+    """Build output directory for a static ad."""
+    ad_type = static_ad.get("ad_type", "product_specific")
+    variant_id = static_ad.get("variant_id", 1)
+    angle = static_ad.get("message_angle", "benefit")
+
+    if ad_type == "general_brand":
+        return os.path.join(
+            BASE_OUTPUT,
+            f"campaign_{campaign_id}",
+            "static_ads",
+            "general_brand",
+            f"variant_{variant_id}_{angle}",
+        )
+    return os.path.join(
+        BASE_OUTPUT,
+        f"campaign_{campaign_id}",
+        "static_ads",
+        "product_specific",
+        f"variant_{variant_id}_{angle}",
+    )
+
+
+# ────────────────────────────────────────────────────────────
 #  Pipeline: full campaign orchestrator
 # ────────────────────────────────────────────────────────────
 
@@ -429,6 +609,21 @@ def run_campaign(campaign_id: str) -> Dict:
                 )
             except Exception as exc:
                 logger.error("Brand videos failed: %s", exc)
+
+        # ── Generate static ads ────────────────────────────
+        static_ads = data.get("static_ads", [])
+        if static_ads:
+            try:
+                queued_static = [
+                    sa for sa in static_ads
+                    if sa.get("status") in ("queued", None)
+                ]
+                if queued_static:
+                    process_static_ads(
+                        cid, queued_static, brand_identity, products,
+                    )
+            except Exception as exc:
+                logger.error("Static ads failed: %s", exc)
 
         # ── Finalise ───────────────────────────────────────
         final_data = _get_campaign_data(cid)

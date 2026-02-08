@@ -99,6 +99,38 @@ class ProductGenerationStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+# ── Static Ad ─────────────────────────────────────────────
+
+class StaticAdStatus(str, enum.Enum):
+    QUEUED = "queued"
+    GENERATING = "generating"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class StaticAdType(str, enum.Enum):
+    PRODUCT_SPECIFIC = "product_specific"
+    GENERAL_BRAND = "general_brand"
+
+
+class StaticAdTemplateCategory(str, enum.Enum):
+    HERO_PRODUCT_SHOWCASE = "hero_product_showcase"
+    BENEFIT_GRID = "benefit_grid"
+    BEFORE_AFTER = "before_after"
+    TESTIMONIAL_TRUST = "testimonial_trust"
+    URGENCY_COUNTDOWN = "urgency_countdown"
+    LIFESTYLE_CONTEXT = "lifestyle_context"
+    STAT_IMPACT_DASHBOARD = "stat_impact_dashboard"
+    MINIMALIST_LUXURY = "minimalist_luxury"
+    PROBLEM_AGITATION_SOLUTION = "problem_agitation_solution"
+    SOCIAL_PROOF_CAROUSEL = "social_proof_carousel"
+    FEATURE_HIGHLIGHT = "feature_highlight"
+    SEASONAL_THEMED = "seasonal_themed"
+    COMPARISON_TABLE = "comparison_table"
+    UGC_AUTHENTICITY = "ugc_authenticity"
+    HOW_IT_WORKS = "how_it_works"
+
+
 # ── Template ───────────────────────────────────────────────
 
 class TemplateCategory(str, enum.Enum):
