@@ -445,6 +445,7 @@ def process_static_ads(
                     width=1080,
                     height=1080,
                     variant_id=sa.get("variant_id", 1),
+                    ad_id=ad_id,  # Pass ad_id to ensure unique filenames per product
                 )
 
                 # Copy to campaign output directory

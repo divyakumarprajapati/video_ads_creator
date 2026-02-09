@@ -329,7 +329,8 @@ def select_static_ad_templates(
 
         scored: List[Tuple[float, StaticAdTemplate]] = []
         for tpl in all_templates:
-            if tpl.template_id in exclude_set or tpl.template_id in used_ids:
+            # On first pass, skip already used templates. On second+ pass, allow reuse
+            if vi < len(all_templates) and (tpl.template_id in exclude_set or tpl.template_id in used_ids):
                 continue
             if tpl.category in EXCLUDED_CATEGORIES or "carousel" in tpl.template_id:
                 continue
@@ -348,9 +349,13 @@ def select_static_ad_templates(
                 price=price,
                 trending_keywords=trending_keywords,
             )
-            # Diversity bonus: penalise already-used categories
+            # Diversity bonus: penalise already-used categories (less penalty on reuse cycles)
+            reuse_cycle = vi // len(all_templates)
             if tpl.category in used_categories:
-                s -= 20
+                s -= max(5, 20 - (reuse_cycle * 10))  # Reduce penalty for later cycles
+            # Slight penalty for template reuse, but allow it when needed
+            if tpl.template_id in used_ids:
+                s -= max(3, 10 - (reuse_cycle * 5))
             scored.append((s, tpl))
 
         scored.sort(key=lambda x: x[0], reverse=True)
@@ -358,8 +363,10 @@ def select_static_ad_templates(
         if scored:
             best_tpl = scored[0][1]
             selected.append(best_tpl)
-            used_categories.add(best_tpl.category)
-            used_ids.add(best_tpl.template_id)
+            # Track usage but allow reuse after first cycle through all templates
+            if vi < len(all_templates):
+                used_categories.add(best_tpl.category)
+                used_ids.add(best_tpl.template_id)
 
     return selected[:count]
 

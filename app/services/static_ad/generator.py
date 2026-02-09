@@ -255,24 +255,72 @@ def _load_and_fit_image(
     return img
 
 
+def _create_product_placeholder(
+    target_size: Tuple[int, int],
+    brand_color: Tuple[int, int, int] = (100, 100, 100),
+    text: str = "Product",
+) -> Image.Image:
+    """Create an attractive placeholder when product image fails to load."""
+    w, h = target_size
+    placeholder = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(placeholder)
+
+    # Create a subtle card with brand color
+    card_color = _lighten(brand_color, 0.15)
+    margin = 10
+    _draw_rounded_rect(
+        draw,
+        (margin, margin, w - margin, h - margin),
+        fill=_with_alpha(card_color, 180),
+        radius=16,
+    )
+    # Add subtle border with brand color
+    for i in range(2):
+        offset = margin + i
+        draw.rectangle(
+            [(offset, offset), (w - offset, h - offset)],
+            outline=_with_alpha(brand_color, 120),
+            width=1,
+        )
+
+    # Add icon/text
+    font = _get_font(min(32, w // 10), bold=True)
+    text_color = _contrast_color(card_color)
+    tw, th = _text_size(draw, text, font)
+    draw.text(((w - tw) // 2, (h - th) // 2), text, fill=text_color, font=font)
+
+    return placeholder
+
+
 def _load_product_image(
     path_or_url: str,
     work_dir: str,
     target_size: Tuple[int, int],
     name: str = "prod",
     bg_remove: bool = True,
+    brand_color: Tuple[int, int, int] = (100, 100, 100),
 ) -> Optional[Image.Image]:
     """Load and clean a product image (bg removal + enhancement)."""
+    if not path_or_url:
+        logger.debug("empty_product_image_url", name=name)
+        return _create_product_placeholder(target_size, brand_color, "Product Image")
+
     img = _load_image(path_or_url, work_dir, name)
     if not img:
-        return None
-    img = img.convert("RGBA")
-    if bg_remove:
-        img = extract_subject_rgba(img)
-    img = enhance_image(img)
-    img = trim_transparent(img, padding=6)
-    img.thumbnail(target_size, Image.LANCZOS)
-    return img
+        logger.warning("product_image_load_failed", url=path_or_url[:100], name=name)
+        return _create_product_placeholder(target_size, brand_color, "Image")
+
+    try:
+        img = img.convert("RGBA")
+        if bg_remove:
+            img = extract_subject_rgba(img)
+        img = enhance_image(img)
+        img = trim_transparent(img, padding=6)
+        img.thumbnail(target_size, Image.LANCZOS)
+        return img
+    except Exception as exc:
+        logger.error("product_image_process_failed", error=str(exc), name=name)
+        return _create_product_placeholder(target_size, brand_color, "Product")
 
 
 def _prepare_product_on_brand_bg(
@@ -491,6 +539,7 @@ class StaticAdGenerator:
         width: int = 1080,
         height: int = 1080,
         variant_id: int = 1,
+        ad_id: Optional[str] = None,
     ) -> str:
         """
         Generate a static ad image.
@@ -523,13 +572,19 @@ class StaticAdGenerator:
             Output image height in pixels.
         variant_id : int
             Variant number for output filename.
+        ad_id : str, optional
+            Unique static ad ID to use for filename (prevents collisions across products).
 
         Returns
         -------
         str
             Path to the generated PNG image file.
         """
-        out_name = f"static_ad_v{variant_id}_{template.template_id}.png"
+        # Use ad_id if provided to ensure unique filenames across products
+        if ad_id:
+            out_name = f"static_ad_{ad_id}.png"
+        else:
+            out_name = f"static_ad_v{variant_id}_{template.template_id}.png"
         output_path = os.path.join(self.work_dir, out_name)
         if os.path.exists(output_path):
             return output_path
@@ -714,7 +769,7 @@ class StaticAdGenerator:
 
         # Product image with drop shadow (right 55%)
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod")
+            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod", brand_color=primary)
             if prod_img:
                 prod_with_shadow = _add_drop_shadow(prod_img, offset=(6, 6), blur_radius=12)
                 px = int(w * 0.50) + (int(w * 0.50) - prod_with_shadow.width) // 2

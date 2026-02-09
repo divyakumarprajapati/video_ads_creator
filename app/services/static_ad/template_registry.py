@@ -486,6 +486,59 @@ def _builtin_templates() -> List["StaticAdTemplate"]:
             effectiveness_factors="Timely urgency and relevance",
             category=_derive_category("seasonal_themed_01"),
         ),
+        StaticAdTemplate(
+            template_id="product_grid_showcase_01",
+            template_name="Product Grid Showcase",
+            description=(
+                "Modern grid layout displaying multiple product images with brand "
+                "elements. Perfect for collections, multi-product campaigns, and collaboration ads."
+            ),
+            visual_structure={
+                "product_placement": "2x2 or 3-column grid, centered with spacing",
+                "headline_placement": "Top-center, bold headline",
+                "subheading_placement": "Below headline or above CTA",
+                "cta_placement": "Bottom-center, prominent button",
+                "logo_placement": "Top-left or header area",
+                "background": "Clean gradient or solid brand color",
+            },
+            best_for=[
+                "Product collections",
+                "Multi-product campaigns",
+                "Product line showcases",
+                "Collaboration ads",
+                "Bundle offers",
+                "Gift sets",
+            ],
+            color_psychology="Clean, organized layout emphasizing product variety",
+            effectiveness_factors="Multiple product visibility, collection appeal",
+            category=_derive_category("product_grid_showcase_01"),
+        ),
+        StaticAdTemplate(
+            template_id="product_carousel_preview_01",
+            template_name="Product Carousel Preview",
+            description=(
+                "Showcase 3-4 products in a carousel-style horizontal layout with "
+                "elegant spacing and shadows. Great for multi-product storytelling."
+            ),
+            visual_structure={
+                "product_placement": "Horizontal carousel, 3-4 products with depth effect",
+                "headline_placement": "Top or bottom third",
+                "subheading_placement": "Near headline",
+                "cta_placement": "Bottom-right or center",
+                "logo_placement": "Top-left",
+                "background": "Gradient with spotlight effect on products",
+            },
+            best_for=[
+                "Product range preview",
+                "Collection launches",
+                "Multi-variant products",
+                "Color/style options",
+                "Product family showcase",
+            ],
+            color_psychology="Dynamic flow emphasizing product variety",
+            effectiveness_factors="Visual storytelling, choice presentation",
+            category=_derive_category("product_carousel_preview_01"),
+        ),
     ]
 
 

@@ -284,10 +284,14 @@ async def generate_campaign_strategy(
             ))
 
         image_pool, image_override = _resolve_static_image_pool(prod)
+        # Generate more static ad variants for better variety and multi-image support
+        # Minimum 12 ads per product to showcase different templates and styles
         if image_pool:
-            static_variant_count = max(product_variants, len(image_pool))
+            # For multi-image products: generate at least 3 templates per image
+            static_variant_count = max(12, len(image_pool) * 3)
         else:
-            static_variant_count = product_variants
+            # Even without extra images, generate 12+ variants with diverse templates
+            static_variant_count = 12
 
         # Select static ad templates for this product (full context)
         static_ad_templates = select_static_ad_templates(
@@ -337,7 +341,8 @@ async def generate_campaign_strategy(
         static_ad_variants: List[StaticAdVariantPlan] = []
         for vi in range(static_variant_count):
             angle = angles[vi % len(angles)]
-            sa_template = static_ad_templates[vi] if vi < len(static_ad_templates) else None
+            # Cycle through templates if we have more variants than templates
+            sa_template = static_ad_templates[vi % len(static_ad_templates)] if static_ad_templates else None
             tpl_category = sa_template.category if sa_template else "hero_product_showcase"
 
             # Use AI static copy if available, else smart deterministic
@@ -449,13 +454,15 @@ async def generate_campaign_strategy(
     ]
 
     # Select static ad templates for brand-level ads (full context)
+    # Generate more brand static ads for collection/collaboration showcases
+    brand_static_count = max(brand_variants * 2, 8)  # At least 8 brand/collection ads
     brand_static_templates = select_brand_static_templates(
         goal=goal,
-        message_angles=[angles[vi % len(angles)] for vi in range(brand_variants)],
+        message_angles=[angles[vi % len(angles)] for vi in range(brand_static_count)],
         industry=brand.industry,
         visual_style=visual_style.value,
         product_count=len(products),
-        count=brand_variants,
+        count=brand_static_count,
         sentiment=market.sentiment.value,
         target_age_min=market.target_audience_age_min,
         target_age_max=market.target_audience_age_max,
@@ -465,9 +472,10 @@ async def generate_campaign_strategy(
     from app.services.static_ad.copywriter import generate_brand_static_ad_copy_deterministic
 
     brand_static_ad_variants: List[StaticAdVariantPlan] = []
-    for vi in range(brand_variants):
+    for vi in range(brand_static_count):
         angle = angles[vi % len(angles)]
-        sa_tpl = brand_static_templates[vi] if vi < len(brand_static_templates) else None
+        # Cycle through templates if needed
+        sa_tpl = brand_static_templates[vi % len(brand_static_templates)] if brand_static_templates else None
         tpl_category = sa_tpl.category if sa_tpl else "benefit_grid_triple"
 
         # Use AI brand copy if available, else smart deterministic
