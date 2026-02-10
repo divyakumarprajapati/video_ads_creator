@@ -18,7 +18,10 @@ _IMAGE_PATTERN = re.compile(r"https?://.+", re.IGNORECASE)
 class ProductInput(BaseModel):
     """Single product as submitted by the caller."""
     product_name: str = Field(..., min_length=1, max_length=256)
-    product_image_url: str = Field(..., description="URL to product image (JPG/PNG/WebP, max 10 MB)")
+    product_image_url: Optional[str] = Field(
+        None,
+        description="Optional URL to product image (JPG/PNG/WebP, max 10 MB).",
+    )
     product_image_urls: Optional[List[str]] = Field(
         None,
         description="Optional list of product image URLs (JPG/PNG/WebP). Used to rotate static ad imagery.",
@@ -42,7 +45,9 @@ class ProductInput(BaseModel):
 
     @field_validator("product_image_url")
     @classmethod
-    def validate_image_url(cls, v: str) -> str:
+    def validate_image_url(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return v
         if not _IMAGE_PATTERN.match(v):
             raise ValueError("product_image_url must be a valid HTTP(S) URL")
         # Check extension (loose check – actual content type is verified during download)
@@ -57,12 +62,13 @@ class ProductInput(BaseModel):
     def validate_image_url_list(cls, v: Optional[List[str]]) -> Optional[List[str]]:
         if v is None:
             return v
-        if not v:
-            raise ValueError("image URL lists must not be empty")
-        for url in v:
+        cleaned = [u for u in v if u]
+        if not cleaned:
+            return None
+        for url in cleaned:
             if not _IMAGE_PATTERN.match(url):
                 raise ValueError("image URL lists must contain valid HTTP(S) URLs")
-        return v
+        return cleaned
 
 
 
@@ -70,7 +76,7 @@ class ProductOut(BaseModel):
     """Product as returned by the API."""
     id: uuid.UUID
     product_name: str
-    product_image_url: str
+    product_image_url: Optional[str] = None
     product_image_urls: Optional[List[str]] = None
     product_description: Optional[str] = None
     product_category: Optional[str] = None

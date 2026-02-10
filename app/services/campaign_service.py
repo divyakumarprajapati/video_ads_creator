@@ -98,14 +98,25 @@ class CampaignService:
         # 2. Insert product rows
         product_models: List[CampaignProduct] = []
         for prod in payload.products:
-            product_image_urls = getattr(prod, "product_image_urls", None) or [prod.product_image_url]
-            image_urls = getattr(prod, "image_urls", None)
-            if image_urls is None and getattr(prod, "image_url", None):
+            product_image_urls = [u for u in (getattr(prod, "product_image_urls", None) or []) if u]
+            primary_image_url = getattr(prod, "product_image_url", None) or ""
+            if not primary_image_url and product_image_urls:
+                primary_image_url = product_image_urls[0]
+            if primary_image_url and primary_image_url not in product_image_urls:
+                product_image_urls = [primary_image_url] + product_image_urls
+            if not product_image_urls:
+                product_image_urls = None
+
+            image_urls = [u for u in (getattr(prod, "image_urls", None) or []) if u]
+            if not image_urls and getattr(prod, "image_url", None):
                 image_urls = [prod.image_url]
+            if not image_urls:
+                image_urls = None
+
             pm = CampaignProduct(
                 campaign_id=campaign.id,
                 product_name=prod.product_name,
-                product_image_url=prod.product_image_url,
+                product_image_url=primary_image_url,
                 product_image_urls=product_image_urls,
                 product_description=prod.product_description,
                 product_category=prod.product_category,
@@ -132,46 +143,60 @@ class CampaignService:
         )
         campaign.strategy_plan = strategy.to_dict()
 
-        # 4. Create video records for product-specific videos
+        # 4. Create video records for product-specific + brand videos (skip if no images)
         video_models: List[CampaignVideo] = []
-        for plan, prod_model in zip(strategy.product_plans, product_models):
-            for var in plan.variants:
-                vm = CampaignVideo(
-                    campaign_id=campaign.id,
-                    product_id=prod_model.id,
-                    video_type=VideoType.PRODUCT_SPECIFIC,
-                    variant_id=var.variant_id,
-                    variant_type=VariantType(var.variant_type),
-                    message_angle=MessageAngle(var.message_angle),
-                    primary_message=var.primary_message,
-                    secondary_message=var.secondary_message,
-                    cta_text=var.cta_text,
-                    template_id=uuid.UUID(var.template_id) if var.template_id else None,
-                )
-                self.db.add(vm)
-                video_models.append(vm)
+        has_any_product_images = any(pm.product_image_url for pm in product_models)
+        if has_any_product_images:
+            for plan, prod_model in zip(strategy.product_plans, product_models):
+                if not prod_model.product_image_url:
+                    logger.info(
+                        "skipping_product_videos_no_image",
+                        product_id=str(prod_model.id),
+                        product_name=prod_model.product_name,
+                    )
+                    continue
+                for var in plan.variants:
+                    vm = CampaignVideo(
+                        campaign_id=campaign.id,
+                        product_id=prod_model.id,
+                        video_type=VideoType.PRODUCT_SPECIFIC,
+                        variant_id=var.variant_id,
+                        variant_type=VariantType(var.variant_type),
+                        message_angle=MessageAngle(var.message_angle),
+                        primary_message=var.primary_message,
+                        secondary_message=var.secondary_message,
+                        cta_text=var.cta_text,
+                        template_id=uuid.UUID(var.template_id) if var.template_id else None,
+                    )
+                    self.db.add(vm)
+                    video_models.append(vm)
 
-        # 5. Create video records for general-brand videos
-        if strategy.brand_plan:
-            bp = strategy.brand_plan
-            for vi, var in enumerate(bp.variants):
-                layout = bp.layout_types[vi] if vi < len(bp.layout_types) else "sequential_carousel"
-                vm = CampaignVideo(
-                    campaign_id=campaign.id,
-                    product_id=None,
-                    video_type=VideoType.GENERAL_BRAND,
-                    variant_id=var.variant_id,
-                    variant_type=VariantType(var.variant_type),
-                    message_angle=MessageAngle(var.message_angle),
-                    primary_message=var.primary_message,
-                    secondary_message=var.secondary_message,
-                    cta_text=var.cta_text,
-                    template_id=uuid.UUID(var.template_id) if var.template_id else None,
-                    layout_type=LayoutType(layout),
-                    products_shown=bp.products_shown,
-                )
-                self.db.add(vm)
-                video_models.append(vm)
+            if strategy.brand_plan:
+                bp = strategy.brand_plan
+                for vi, var in enumerate(bp.variants):
+                    layout = bp.layout_types[vi] if vi < len(bp.layout_types) else "sequential_carousel"
+                    vm = CampaignVideo(
+                        campaign_id=campaign.id,
+                        product_id=None,
+                        video_type=VideoType.GENERAL_BRAND,
+                        variant_id=var.variant_id,
+                        variant_type=VariantType(var.variant_type),
+                        message_angle=MessageAngle(var.message_angle),
+                        primary_message=var.primary_message,
+                        secondary_message=var.secondary_message,
+                        cta_text=var.cta_text,
+                        template_id=uuid.UUID(var.template_id) if var.template_id else None,
+                        layout_type=LayoutType(layout),
+                        products_shown=bp.products_shown,
+                    )
+                    self.db.add(vm)
+                    video_models.append(vm)
+        else:
+            logger.info(
+                "static_ads_only_no_images",
+                campaign_id=str(campaign.id),
+                products=len(product_models),
+            )
 
         # 5b. Create static ad records for product-specific static ads
         static_ad_models: List[CampaignStaticAd] = []
@@ -224,10 +249,12 @@ class CampaignService:
         total_videos = len(video_models)
         total_static_ads = len(static_ad_models)
 
-        # Estimate completion: ~3 min per product + 3 min for brand videos
-        # (conservative; parallel processing makes this faster on multi-GPU)
-        num_products = len(product_models)
-        estimated_minutes = max(3, (num_products * 3 + 3) / max(1, 2))  # assume 2 workers
+        # Estimate completion: videos take longer; static-ads-only is faster.
+        if total_videos == 0:
+            estimated_minutes = max(1, total_static_ads / max(1, 3))
+        else:
+            num_products = len(product_models)
+            estimated_minutes = max(3, (num_products * 3 + 3) / max(1, 2))  # assume 2 workers
         campaign.estimated_completion = datetime.now(timezone.utc) + timedelta(minutes=estimated_minutes)
 
         # 7. Dispatch worker (Celery or background thread)

@@ -219,6 +219,33 @@ def _cache_key(source: str) -> str:
     return hashlib.sha1(source.encode("utf-8")).hexdigest()[:10]
 
 
+def _looks_like_inline_svg(source: str) -> bool:
+    if not source:
+        return False
+    return "<svg" in source and "</svg>" in source
+
+
+def _load_inline_svg(
+    svg_text: str,
+    work_dir: str,
+    name: str,
+) -> Optional[Image.Image]:
+    key = _cache_key(svg_text)
+    svg_path = os.path.join(work_dir, f"_inline_{name}_{key}.svg")
+    png_path = os.path.join(work_dir, f"_inline_{name}_{key}.png")
+    try:
+        if not os.path.exists(svg_path):
+            with open(svg_path, "w", encoding="utf-8") as f:
+                f.write(svg_text)
+        if not os.path.exists(png_path):
+            import cairosvg
+            cairosvg.svg2png(url=svg_path, write_to=png_path)
+        return Image.open(png_path)
+    except Exception as exc:
+        logger.warning("inline_svg_load_failed", error=str(exc))
+        return None
+
+
 def _load_image(
     path_or_url: str,
     work_dir: str,
@@ -226,6 +253,8 @@ def _load_image(
 ) -> Optional[Image.Image]:
     """Load an image from path or URL with a per-source cache key."""
     try:
+        if _looks_like_inline_svg(path_or_url):
+            return _load_inline_svg(path_or_url, work_dir, name)
         if path_or_url.startswith(("http://", "https://")):
             key = _cache_key(path_or_url)
             dest = os.path.join(work_dir, f"_dl_{name}_{key}.png")

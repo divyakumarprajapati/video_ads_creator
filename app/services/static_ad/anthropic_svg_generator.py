@@ -7,10 +7,11 @@ Generates SVG ads using Anthropic Messages API.
 from __future__ import annotations
 
 import base64
+import hashlib
 import os
 import re
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from PIL import Image
@@ -95,6 +96,69 @@ class AnthropicSvgGenerator:
             f.write(svg)
 
         logger.info("anthropic_svg_generated", path=output_path)
+        return output_path
+
+    def generate_brand_only(
+        self,
+        *,
+        headline: str,
+        subheading: str = "",
+        cta_text: str = "",
+        body_text: str = "",
+        brand_name: str = "",
+        brand_colors: Dict[str, str],
+        logo_svg: str = "",
+        market_research: Optional[Dict[str, Any]] = None,
+        style_hint: str = "",
+        width: int = 1200,
+        height: int = 900,
+        variant_id: int = 1,
+        ad_id: Optional[str] = None,
+        ad_type: str = "general_brand",
+    ) -> Optional[str]:
+        if not settings.anthropic_api_key:
+            return None
+
+        headline = _sanitize_display_text(headline)
+        subheading = _sanitize_display_text(subheading)
+        body_text = _sanitize_display_text(body_text)
+        cta_text = _sanitize_display_text(cta_text)
+
+        out_name = f"static_ad_{ad_id}.svg" if ad_id else f"static_ad_svg_v{variant_id}.svg"
+        output_path = os.path.join(self.work_dir, out_name)
+        if os.path.exists(output_path):
+            return output_path
+
+        tokens = self._prepare_logo_token(logo_svg) if logo_svg else {}
+        prompt = self._build_brand_only_prompt(
+            headline=headline,
+            subheading=subheading,
+            cta_text=cta_text,
+            body_text=body_text,
+            brand_name=brand_name,
+            brand_colors=brand_colors,
+            style_hint=style_hint,
+            width=width,
+            height=height,
+            ad_type=ad_type,
+            logo_tokens=tokens,
+            market_research=market_research or {},
+        )
+
+        svg_text = self._call_anthropic(prompt)
+        if not svg_text:
+            return None
+
+        svg = self._extract_svg(svg_text)
+        if tokens:
+            svg = self._apply_tokens(svg, tokens)
+        svg = self._ensure_svg_root(svg, width, height)
+        svg = self._ensure_background(svg, brand_colors.get("background", "#FFFFFF"))
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(svg)
+
+        logger.info("anthropic_svg_generated_brand_only", path=output_path)
         return output_path
 
     def _call_anthropic(self, prompt: str) -> Optional[str]:
@@ -204,6 +268,19 @@ class AnthropicSvgGenerator:
         img = _prepare_product_image(img, max_size=max_size, pad_to_square=pad_to_square)
         return _raster_to_svg_data_uri(img, max_size=max_size, pad_to_square=pad_to_square)
 
+    def _inline_svg_to_svg_data_uri(
+        self,
+        svg_text: str,
+        *,
+        max_size: int = 256,
+    ) -> Tuple[str, int, int]:
+        key = hashlib.sha1(svg_text.encode("utf-8")).hexdigest()[:10]
+        svg_path = os.path.join(self.work_dir, f"_inline_logo_{key}.svg")
+        if not os.path.exists(svg_path):
+            with open(svg_path, "w", encoding="utf-8") as f:
+                f.write(svg_text)
+        return self._image_to_svg_data_uri(svg_path, max_size=max_size, pad_to_square=False)
+
     def _build_prompt(
         self,
         *,
@@ -264,6 +341,92 @@ class AnthropicSvgGenerator:
             "- Keep all text within safe margins (~6% padding).\n"
             "- Output only SVG (no markdown)."
         )
+
+    def _build_brand_only_prompt(
+        self,
+        *,
+        headline: str,
+        subheading: str,
+        cta_text: str,
+        body_text: str,
+        brand_name: str,
+        brand_colors: Dict[str, str],
+        style_hint: str,
+        width: int,
+        height: int,
+        ad_type: str,
+        logo_tokens: Dict[str, Dict[str, str]],
+        market_research: Dict[str, Any],
+    ) -> str:
+        primary = brand_colors.get("primary", "#1F2937")
+        secondary = brand_colors.get("secondary", "#F3F4F6")
+        accent = brand_colors.get("accent", primary)
+        bg = brand_colors.get("background", "#FFFFFF")
+        text = brand_colors.get("text", "#111827")
+
+        token_lines = []
+        for token, info in logo_tokens.items():
+            token_lines.append(
+                f"- token: {{{{{token}}}}} | name: {info['name']} | size: {info['width']}x{info['height']}"
+            )
+
+        style_line = ""
+        if style_hint:
+            style_line = f"Style hint: {style_hint}\n\n"
+
+        market_line = _format_market_context(market_research)
+        market_block = f"{market_line}\n" if market_line else ""
+
+        placeholders = ""
+        if token_lines:
+            placeholders = "Logo placeholder:\n" + "\n".join(token_lines) + "\n\n"
+
+        return (
+            "Create a premium static advertisement as a single SVG.\n"
+            f"Canvas: {width}x{height} (4:3 landscape), viewBox='0 0 {width} {height}'.\n"
+            f"Ad type: {ad_type}.\n"
+            + placeholders +
+            f"Brand: {brand_name}\n"
+            f"Colors: primary={primary}, secondary={secondary}, accent={accent}, "
+            f"background={bg}, text={text}\n"
+            f"Headline (tagline): {headline or '[short, punchy tagline]'}\n"
+            f"Description: {subheading or body_text or '[single supporting line]'}\n"
+            f"CTA (one action): {cta_text or '[short CTA button text]'}\n"
+            + market_block +
+            "\n"
+            + style_line +
+            "Design rules:\n"
+            "- Clean, modern, high-contrast layout with minimal elements.\n"
+            "- Exactly ONE CTA button. No extra badges, tags, or multiple buttons.\n"
+            "- No product photos or mockups. Do not invent product images.\n"
+            "- Use only the provided headline + one description line + one CTA. Do not add extra text.\n"
+            "- If a logo placeholder is provided, include it; otherwise, use the brand name as text.\n"
+            "- Use a full-bleed background in brand colors (solid or subtle gradient), not default white unless brand background is white.\n"
+            "- Keep all text within safe margins (~6% padding).\n"
+            "- Output only SVG (no markdown)."
+        )
+
+    def _prepare_logo_token(self, logo_svg: str) -> Dict[str, Dict[str, str]]:
+        src = logo_svg.strip()
+        if not src:
+            return {}
+        try:
+            if "<svg" in src:
+                data_uri, w, h = self._inline_svg_to_svg_data_uri(src, max_size=256)
+            else:
+                data_uri, w, h = self._image_to_svg_data_uri(src, max_size=256, pad_to_square=False)
+        except Exception:
+            return {}
+        if not data_uri:
+            return {}
+        return {
+            "LOGO": {
+                "name": "Brand Logo",
+                "data_uri": data_uri,
+                "width": str(w),
+                "height": str(h),
+            }
+        }
 
     def _extract_svg(self, text: str) -> str:
         match = re.search(r"<svg[^>]*>.*?</svg>", text, flags=re.I | re.S)
@@ -344,6 +507,36 @@ def _strip_garbage_tokens(text: str) -> str:
             continue
         cleaned_tokens.append(tok)
     return " ".join(cleaned_tokens)
+
+
+def _format_market_context(market_research: Optional[Dict[str, Any]]) -> str:
+    if not market_research:
+        return ""
+    parts: List[str] = []
+    saturation = market_research.get("saturation_percent")
+    competitive = market_research.get("competitive_edge_percent")
+    sentiment = market_research.get("sentiment")
+    age_min = market_research.get("target_audience_age_min")
+    age_max = market_research.get("target_audience_age_max")
+    gender = market_research.get("target_audience_gender")
+    trending = market_research.get("trending_keywords") or []
+
+    if isinstance(saturation, (int, float)):
+        parts.append(f"saturation {int(saturation)}%")
+    if isinstance(competitive, (int, float)):
+        parts.append(f"competitive edge {int(competitive)}%")
+    if sentiment:
+        parts.append(f"sentiment {sentiment}")
+    if age_min is not None and age_max is not None:
+        parts.append(f"audience {age_min}-{age_max}")
+    if gender:
+        parts.append(f"gender {gender}")
+    if trending:
+        parts.append("trends " + ", ".join(trending[:8]))
+
+    if not parts:
+        return ""
+    return "Market context: " + "; ".join(parts)
 
 
 def _prepare_product_image(

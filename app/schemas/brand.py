@@ -29,7 +29,10 @@ class BrandIdentity(BaseModel):
     """Everything we need to keep video output on-brand."""
     brand_name: str = Field(..., min_length=1, max_length=256)
     tagline: Optional[str] = None
-    logo_url: Optional[str] = None
+    logo_url: Optional[str] = Field(
+        None,
+        description="Inline SVG string for the brand logo (not a URL).",
+    )
     colors: BrandColors
     fonts: BrandFonts
     voice: str = Field("professional", description="Brand voice: professional, playful, bold, etc.")

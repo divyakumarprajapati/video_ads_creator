@@ -434,6 +434,7 @@ def process_static_ads(
     brand_identity: Dict,
     products: List[Dict],
     product_assets_map: Optional[Dict[str, Dict]] = None,
+    market_research: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     """
     Generate static ad images for all static ad records in the campaign.
@@ -448,8 +449,10 @@ def process_static_ads(
     """
     cid = campaign_id
     work = tmp_dir(prefix="static_ads_")
-    ad_width = 768
-    ad_height = 1024
+    default_width = 768
+    default_height = 1024
+    no_image_width = 1200
+    no_image_height = 900
 
     try:
         generator = StaticAdGenerator(work)
@@ -500,39 +503,28 @@ def process_static_ads(
 
                 # image_url from user takes priority for the hero shot
                 final_image = image_url if image_url else None
+                ad_type = sa.get("ad_type", "product_specific")
+                has_image_sources = bool(final_image or anthropic_product_source or product_image_source)
+                no_image_ad = not has_image_sources
+                use_text_only = use_anthropic and no_image_ad
+                ad_width = no_image_width if no_image_ad else default_width
+                ad_height = no_image_height if no_image_ad else default_height
 
                 output_path = None
                 if use_anthropic:
-                    ad_type = sa.get("ad_type", "product_specific")
                     product_images: List[str] = []
                     product_names: List[str] = []
 
-                    if ad_type == "general_brand":
-                        collab_products = _select_collab_products(products, variant_id)
-                        for prod in collab_products:
-                            pid = str(prod.get("id"))
-                            src = _resolve_product_image_source(
-                                pid, product_map, product_assets_map, prefer_no_bg=True
-                            )
-                            if src:
-                                product_images.append(src)
-                                product_names.append(prod.get("product_name", "Product"))
-                    else:
-                        src = final_image or anthropic_product_source
-                        if src:
-                            product_images = [src]
-                            product_names = [product_map.get(product_id, {}).get("product_name", "Product")]
-
-                    if product_images:
-                        output_path = svg_generator.generate(
+                    if use_text_only:
+                        output_path = svg_generator.generate_brand_only(
                             headline=sa.get("headline", ""),
                             subheading=sa.get("subheading", ""),
                             cta_text=sa.get("cta_text", ""),
                             body_text=sa.get("body_text", ""),
                             brand_colors=brand_colors,
                             brand_name=brand_name,
-                            product_images=product_images,
-                            product_names=product_names,
+                            logo_svg=logo_url or "",
+                            market_research=market_research or {},
                             style_hint=_build_style_hint(sa),
                             width=ad_width,
                             height=ad_height,
@@ -540,6 +532,40 @@ def process_static_ads(
                             ad_id=ad_id,
                             ad_type=ad_type,
                         )
+                    else:
+                        if ad_type == "general_brand":
+                            collab_products = _select_collab_products(products, variant_id)
+                            for prod in collab_products:
+                                pid = str(prod.get("id"))
+                                src = _resolve_product_image_source(
+                                    pid, product_map, product_assets_map, prefer_no_bg=True
+                                )
+                                if src:
+                                    product_images.append(src)
+                                    product_names.append(prod.get("product_name", "Product"))
+                        else:
+                            src = final_image or anthropic_product_source
+                            if src:
+                                product_images = [src]
+                                product_names = [product_map.get(product_id, {}).get("product_name", "Product")]
+
+                        if product_images:
+                            output_path = svg_generator.generate(
+                                headline=sa.get("headline", ""),
+                                subheading=sa.get("subheading", ""),
+                                cta_text=sa.get("cta_text", ""),
+                                body_text=sa.get("body_text", ""),
+                                brand_colors=brand_colors,
+                                brand_name=brand_name,
+                                product_images=product_images,
+                                product_names=product_names,
+                                style_hint=_build_style_hint(sa),
+                                width=ad_width,
+                                height=ad_height,
+                                variant_id=variant_id,
+                                ad_id=ad_id,
+                                ad_type=ad_type,
+                            )
 
                 # Fallback to template-based generator if Anthropic fails
                 if not output_path:
@@ -717,6 +743,9 @@ def run_campaign(campaign_id: str) -> Dict:
             prod_dict = dict(prod)
             prod_dict["product_index"] = idx
             product_data_map[str(prod["id"])] = prod_dict
+            if not prod.get("product_image_url"):
+                logger.info("skipping_asset_prep_no_image", product_id=str(prod["id"]))
+                continue
             try:
                 assets = asset_proc.prepare_product_assets(
                     image_url=prod["product_image_url"],
@@ -769,6 +798,7 @@ def run_campaign(campaign_id: str) -> Dict:
                     process_static_ads(
                         cid, queued_static, brand_identity, products,
                         product_assets_map=product_assets_map,
+                        market_research=data.get("market_research") or {},
                     )
             except Exception as exc:
                 logger.error("Static ads failed: %s", exc)
@@ -778,15 +808,26 @@ def run_campaign(campaign_id: str) -> Dict:
         total = len(final_data["videos"])
         completed = sum(1 for v in final_data["videos"] if v.get("status") == "completed")
         failed = sum(1 for v in final_data["videos"] if v.get("status") == "failed")
+        total_static = len(final_data.get("static_ads") or [])
+        completed_static = sum(1 for sa in (final_data.get("static_ads") or []) if sa.get("status") == "completed")
+        failed_static = sum(1 for sa in (final_data.get("static_ads") or []) if sa.get("status") == "failed")
 
-        if failed == total:
-            final_status = "failed"
-        elif completed > 0:
-            final_status = "completed"
+        if total == 0 and total_static > 0:
+            if failed_static == total_static:
+                final_status = "failed"
+            elif completed_static > 0:
+                final_status = "completed"
+            else:
+                final_status = "failed"
+            progress = round((completed_static / total_static) * 100, 1)
         else:
-            final_status = "failed"
-
-        progress = round((completed / total) * 100, 1) if total else 0
+            if failed == total:
+                final_status = "failed"
+            elif completed > 0:
+                final_status = "completed"
+            else:
+                final_status = "failed"
+            progress = round((completed / total) * 100, 1) if total else 0
         _update_campaign_record(cid, status=final_status, overall_progress=progress)
         update_campaign_progress(cid, progress, final_status)
 

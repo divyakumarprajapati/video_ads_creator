@@ -44,7 +44,7 @@ class CampaignCreate(BaseModel):
 
     brand_identity: BrandIdentity
     market_research: MarketResearch
-    products: List[ProductInput] = Field(..., min_length=1)
+    products: List[ProductInput] = Field(default_factory=list)
 
     campaign_goal: CampaignGoal = CampaignGoal.AWARENESS
     platforms: List[Platform] = Field(

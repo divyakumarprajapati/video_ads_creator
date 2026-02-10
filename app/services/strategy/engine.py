@@ -122,6 +122,17 @@ def _resolve_static_image_pool(prod: ProductInput) -> tuple[List[str], bool]:
     return product_urls, False
 
 
+def _has_any_images(products: List[ProductInput]) -> bool:
+    for prod in products:
+        if _normalize_url_list(getattr(prod, "product_image_url", None),
+                               getattr(prod, "product_image_urls", None)):
+            return True
+        if _normalize_url_list(getattr(prod, "image_url", None),
+                               getattr(prod, "image_urls", None)):
+            return True
+    return False
+
+
 @dataclass
 class VideoVariantPlan:
     """Blueprint for one video file to be generated."""
@@ -263,6 +274,7 @@ async def generate_campaign_strategy(
     )
 
     per_product_static_limit, brand_static_limit = _static_ad_limits(len(products))
+    no_image_mode = not _has_any_images(products)
 
     # 4. Per-product creative plans
     product_plans: List[ProductCreativePlan] = []
@@ -312,18 +324,21 @@ async def generate_campaign_strategy(
             ))
 
         image_pool, image_override = _resolve_static_image_pool(prod)
-        # Generate more static ad variants for better variety and multi-image support
-        # Minimum 12 ads per product to showcase different templates and styles
-        if image_pool:
-            # For multi-image products: generate at least 3 templates per image
-            static_variant_count = max(12, len(image_pool) * 3)
-        else:
-            # Even without extra images, generate 12+ variants with diverse templates
-            static_variant_count = 12
-        if per_product_static_limit > 0:
-            static_variant_count = min(static_variant_count, per_product_static_limit)
-        else:
+        if no_image_mode:
             static_variant_count = 0
+        else:
+            # Generate more static ad variants for better variety and multi-image support
+            # Minimum 12 ads per product to showcase different templates and styles
+            if image_pool:
+                # For multi-image products: generate at least 3 templates per image
+                static_variant_count = max(12, len(image_pool) * 3)
+            else:
+                # Even without extra images, generate 12+ variants with diverse templates
+                static_variant_count = 12
+            if per_product_static_limit > 0:
+                static_variant_count = min(static_variant_count, per_product_static_limit)
+            else:
+                static_variant_count = 0
 
         # Select static ad templates for this product (full context)
         static_ad_templates = select_static_ad_templates(
@@ -491,11 +506,14 @@ async def generate_campaign_strategy(
 
     # Select static ad templates for brand-level ads (full context)
     # Generate more brand static ads for collection/collaboration showcases
-    brand_static_count = max(brand_variants * 2, 8)  # At least 8 brand/collection ads
-    if brand_static_limit > 0:
-        brand_static_count = min(brand_static_count, brand_static_limit)
+    if no_image_mode:
+        brand_static_count = 5
     else:
-        brand_static_count = 0
+        brand_static_count = max(brand_variants * 2, 8)  # At least 8 brand/collection ads
+        if brand_static_limit > 0:
+            brand_static_count = min(brand_static_count, brand_static_limit)
+        else:
+            brand_static_count = 0
     brand_static_templates = select_brand_static_templates(
         goal=goal,
         message_angles=[angles[vi % len(angles)] for vi in range(brand_static_count)],
