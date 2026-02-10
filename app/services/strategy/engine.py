@@ -19,6 +19,7 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.enums import (
     CampaignGoal,
     LayoutType,
@@ -45,6 +46,7 @@ from app.services.strategy.decision_matrices import (
 from app.services.strategy.platform_specs import get_platform_spec
 from app.services.strategy.template_selector import select_templates
 
+settings = get_settings()
 
 # ── Data classes that form the strategy output ──────────────
 
@@ -63,6 +65,30 @@ def _dedupe_urls(urls: List[str]) -> List[str]:
         cleaned.append(url)
         seen.add(url)
     return cleaned
+
+
+def _static_ad_limits(num_products: int) -> tuple[int, int]:
+    """Return (per_product_limit, brand_limit) based on settings."""
+    max_total = max(0, settings.static_ads_max_total)
+    min_total = max(0, settings.static_ads_min_total)
+    if max_total <= 0:
+        return 0, 0
+
+    brand_limit = max(0, min(settings.static_ads_brand_count, max_total))
+    if num_products <= 0:
+        return 0, brand_limit
+
+    available = max_total - brand_limit
+    per_product = available // num_products
+    total = brand_limit + per_product * num_products
+    target_min = min(min_total, max_total)
+
+    # Best-effort: increase per-product count while staying under max_total.
+    while total < target_min and (total + num_products) <= max_total:
+        per_product += 1
+        total += num_products
+
+    return max(0, per_product), brand_limit
 
 
 def _normalize_url_list(primary: Optional[str], extras: Optional[List[str]]) -> List[str]:
@@ -236,6 +262,8 @@ async def generate_campaign_strategy(
         select_brand_static_templates,
     )
 
+    per_product_static_limit, brand_static_limit = _static_ad_limits(len(products))
+
     # 4. Per-product creative plans
     product_plans: List[ProductCreativePlan] = []
     for idx, prod in enumerate(products):
@@ -292,6 +320,10 @@ async def generate_campaign_strategy(
         else:
             # Even without extra images, generate 12+ variants with diverse templates
             static_variant_count = 12
+        if per_product_static_limit > 0:
+            static_variant_count = min(static_variant_count, per_product_static_limit)
+        else:
+            static_variant_count = 0
 
         # Select static ad templates for this product (full context)
         static_ad_templates = select_static_ad_templates(
@@ -317,7 +349,11 @@ async def generate_campaign_strategy(
         )
 
         ai_static_copies = None
-        if getattr(prod, "product_image_url", None) or getattr(prod, "product_image_urls", None):
+        if (
+            settings.static_ad_copy_provider == "openai"
+            and settings.openai_enabled
+            and (getattr(prod, "product_image_url", None) or getattr(prod, "product_image_urls", None))
+        ):
             ai_static_copies = await generate_static_ad_copy_ai(
                 product_name=prod.product_name,
                 product_description=prod.product_description,
@@ -456,6 +492,10 @@ async def generate_campaign_strategy(
     # Select static ad templates for brand-level ads (full context)
     # Generate more brand static ads for collection/collaboration showcases
     brand_static_count = max(brand_variants * 2, 8)  # At least 8 brand/collection ads
+    if brand_static_limit > 0:
+        brand_static_count = min(brand_static_count, brand_static_limit)
+    else:
+        brand_static_count = 0
     brand_static_templates = select_brand_static_templates(
         goal=goal,
         message_angles=[angles[vi % len(angles)] for vi in range(brand_static_count)],

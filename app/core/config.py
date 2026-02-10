@@ -87,6 +87,19 @@ class Settings(BaseSettings):
     def openai_enabled(self) -> bool:
         return bool(self.openai_api_key)
 
+    # ── Anthropic (for SVG static ad generation) ─────────────
+    anthropic_api_key: str = ""           # set to enable Anthropic SVG ads
+    anthropic_model: str = "claude-opus-4-5"
+    anthropic_max_tokens: int = 4000
+    anthropic_temperature: float = 0.6
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_request_timeout_s: int = 120
+    use_anthropic_svg_ads: bool = True
+    static_ad_copy_provider: str = "deterministic"  # deterministic | openai
+    static_ads_max_total: int = 15
+    static_ads_min_total: int = 10
+    static_ads_brand_count: int = 3
+
     # ── AI Models (vision / video – open source) ──────────
     models_dir: str = "/models"
     sdxl_model_path: str = "/models/stable-diffusion-xl-base-1.0"

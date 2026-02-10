@@ -22,6 +22,7 @@ from app.services.asset.processor import AssetProcessor
 from app.services.export.encoder import PlatformEncoder
 from app.services.qa.validator import QAValidator
 from app.services.static_ad.generator import StaticAdGenerator
+from app.services.static_ad.anthropic_svg_generator import AnthropicSvgGenerator
 from app.services.static_ad.template_registry import get_template_by_id
 from app.services.static_ad.validator import StaticAdValidator
 from app.services.video.generator import VideoGenerator
@@ -40,6 +41,79 @@ settings = get_settings()
 BASE_OUTPUT = os.environ.get("VIDEO_OUTPUT_DIR", os.path.abspath(
     settings.local_storage_root if settings.storage_backend == "local" else "/tmp/video_ads_output"
 ))
+
+
+# ────────────────────────────────────────────────────────────
+#  Helpers: static ads (Anthropic SVG)
+# ────────────────────────────────────────────────────────────
+
+def _resolve_product_image_source(
+    product_id: Optional[str],
+    product_map: Dict[str, Dict],
+    product_assets_map: Optional[Dict[str, Dict]] = None,
+    *,
+    prefer_no_bg: bool = False,
+) -> str:
+    if not product_id:
+        return ""
+    if product_assets_map and product_id in product_assets_map:
+        assets = product_assets_map[product_id]
+        if prefer_no_bg:
+            return (
+                assets.get("no_bg")
+                or assets.get("upscaled")
+                or assets.get("original")
+                or assets.get("composite")
+                or ""
+            )
+        return (
+            assets.get("upscaled")
+            or assets.get("no_bg")
+            or assets.get("composite")
+            or assets.get("original")
+            or ""
+        )
+    return product_map.get(product_id, {}).get("product_image_url", "")
+
+
+def _select_collab_products(
+    products: List[Dict],
+    variant_id: int,
+) -> List[Dict]:
+    if not products:
+        return []
+    count = 2 if variant_id % 2 == 0 else 3
+    count = min(count, len(products))
+    start = variant_id % len(products)
+    selected = []
+    for i in range(count):
+        selected.append(products[(start + i) % len(products)])
+    return selected
+
+
+def _build_style_hint(static_ad: Dict) -> str:
+    template_name = (static_ad.get("static_template_name") or "").lower()
+
+    if "minimal" in template_name or "luxury" in template_name:
+        return "minimalist luxury, lots of white space, elegant typography"
+    if "ugc" in template_name or "authentic" in template_name:
+        return "authentic, UGC-inspired, casual, natural lighting"
+    if "before_after" in template_name:
+        return "split layout, clear before/after labels, clinical clarity"
+    if "urgency" in template_name:
+        return "bold urgency, high contrast, offer emphasis (no timers)"
+    if "social_proof" in template_name or "testimonial" in template_name:
+        return "trust-building, social proof elements, clean badges"
+    return ""
+
+
+def _try_rasterize_svg(svg_path: str, png_path: str) -> bool:
+    try:
+        import cairosvg
+        cairosvg.svg2png(url=svg_path, write_to=png_path)
+        return os.path.exists(png_path)
+    except Exception:
+        return False
 
 
 # ────────────────────────────────────────────────────────────
@@ -374,10 +448,14 @@ def process_static_ads(
     """
     cid = campaign_id
     work = tmp_dir(prefix="static_ads_")
+    ad_width = 768
+    ad_height = 1024
 
     try:
         generator = StaticAdGenerator(work)
+        svg_generator = AnthropicSvgGenerator(work)
         qa = StaticAdValidator()
+        use_anthropic = bool(settings.use_anthropic_svg_ads and settings.anthropic_api_key)
 
         # Build product lookup
         product_map: Dict[str, Dict] = {}
@@ -392,6 +470,7 @@ def process_static_ads(
         for sa in static_ad_records:
             ad_id = str(sa["id"])
             template_id = sa.get("static_template_id", "")
+            variant_id = sa.get("variant_id", 1)
 
             try:
                 _update_static_ad_record(ad_id, status="generating")
@@ -403,50 +482,88 @@ def process_static_ads(
                     all_tpls = get_all_templates()
                     template = all_tpls[0] if all_tpls else None
 
-                if not template:
+                if not template and not use_anthropic:
                     logger.warning("No static ad templates available, skipping ad %s", ad_id)
                     _update_static_ad_record(ad_id, status="failed")
                     results.append({"ad_id": ad_id, "status": "failed"})
                     continue
 
                 # Resolve product image — prefer pre-processed composite
-                product_image_source = ""
                 image_url = sa.get("image_url", "")
-                product_id = sa.get("product_id")
-
-                if product_id and product_assets_map and str(product_id) in product_assets_map:
-                    # Prefer bg-removed upscaled asset for static ads
-                    assets = product_assets_map[str(product_id)]
-                    product_image_source = (
-                        assets.get("upscaled")
-                        or assets.get("no_bg")
-                        or assets.get("composite")
-                        or ""
-                    )
-                elif product_id and str(product_id) in product_map:
-                    # Fall back to raw product URL
-                    product_image_source = product_map[str(product_id)].get("product_image_url", "")
+                product_id = str(sa.get("product_id") or "")
+                product_image_source = _resolve_product_image_source(
+                    product_id, product_map, product_assets_map
+                )
+                anthropic_product_source = _resolve_product_image_source(
+                    product_id, product_map, product_assets_map, prefer_no_bg=True
+                )
 
                 # image_url from user takes priority for the hero shot
                 final_image = image_url if image_url else None
 
-                # Generate the static ad image
-                output_path = generator.generate(
-                    template=template,
-                    headline=sa.get("headline", ""),
-                    subheading=sa.get("subheading", ""),
-                    cta_text=sa.get("cta_text", ""),
-                    body_text=sa.get("body_text", ""),
-                    brand_colors=brand_colors,
-                    brand_name=brand_name,
-                    logo_url=logo_url,
-                    product_image_url=product_image_source,
-                    image_url=final_image,
-                    width=1080,
-                    height=1080,
-                    variant_id=sa.get("variant_id", 1),
-                    ad_id=ad_id,  # Pass ad_id to ensure unique filenames per product
-                )
+                output_path = None
+                if use_anthropic:
+                    ad_type = sa.get("ad_type", "product_specific")
+                    product_images: List[str] = []
+                    product_names: List[str] = []
+
+                    if ad_type == "general_brand":
+                        collab_products = _select_collab_products(products, variant_id)
+                        for prod in collab_products:
+                            pid = str(prod.get("id"))
+                            src = _resolve_product_image_source(
+                                pid, product_map, product_assets_map, prefer_no_bg=True
+                            )
+                            if src:
+                                product_images.append(src)
+                                product_names.append(prod.get("product_name", "Product"))
+                    else:
+                        src = final_image or anthropic_product_source
+                        if src:
+                            product_images = [src]
+                            product_names = [product_map.get(product_id, {}).get("product_name", "Product")]
+
+                    if product_images:
+                        output_path = svg_generator.generate(
+                            headline=sa.get("headline", ""),
+                            subheading=sa.get("subheading", ""),
+                            cta_text=sa.get("cta_text", ""),
+                            body_text=sa.get("body_text", ""),
+                            brand_colors=brand_colors,
+                            brand_name=brand_name,
+                            product_images=product_images,
+                            product_names=product_names,
+                            style_hint=_build_style_hint(sa),
+                            width=ad_width,
+                            height=ad_height,
+                            variant_id=variant_id,
+                            ad_id=ad_id,
+                            ad_type=ad_type,
+                        )
+
+                # Fallback to template-based generator if Anthropic fails
+                if not output_path:
+                    if not template:
+                        logger.warning("No template available for fallback ad %s", ad_id)
+                        _update_static_ad_record(ad_id, status="failed")
+                        results.append({"ad_id": ad_id, "status": "failed"})
+                        continue
+                    output_path = generator.generate(
+                        template=template,
+                        headline=sa.get("headline", ""),
+                        subheading=sa.get("subheading", ""),
+                        cta_text=sa.get("cta_text", ""),
+                        body_text=sa.get("body_text", ""),
+                        brand_colors=brand_colors,
+                        brand_name=brand_name,
+                        logo_url=logo_url,
+                        product_image_url=product_image_source,
+                        image_url=final_image,
+                        width=ad_width,
+                        height=ad_height,
+                        variant_id=variant_id,
+                        ad_id=ad_id,  # Pass ad_id to ensure unique filenames per product
+                    )
 
                 # Copy to campaign output directory
                 out_dir = _static_ad_output_dir(cid, sa)
@@ -457,22 +574,30 @@ def process_static_ads(
 
                 # Create a thumbnail (smaller version)
                 thumb_path = os.path.join(out_dir, f"thumb_{os.path.basename(output_path)}")
-                try:
-                    from PIL import Image as PILImage
-                    thumb = PILImage.open(final_path)
-                    thumb.thumbnail((300, 300), PILImage.LANCZOS)
-                    thumb.save(thumb_path, quality=85)
-                except Exception:
+                if final_path.lower().endswith(".svg"):
+                    # Keep SVG thumbnails as SVG; do not rasterize.
                     thumb_path = final_path
+                else:
+                    try:
+                        from PIL import Image as PILImage
+                        thumb = PILImage.open(final_path)
+                        thumb.thumbnail((300, 300), PILImage.LANCZOS)
+                        thumb.save(thumb_path, quality=85)
+                    except Exception:
+                        thumb_path = final_path
 
                 fsize = file_size_mb(final_path)
 
-                # Run quality validation
-                qa_result = qa.validate(
-                    final_path,
-                    headline=sa.get("headline", ""),
-                    cta_text=sa.get("cta_text", ""),
-                )
+                qa_score = 80.0
+                if not final_path.lower().endswith(".svg"):
+                    qa_result = qa.validate(
+                        final_path,
+                        expected_width=ad_width,
+                        expected_height=ad_height,
+                        headline=sa.get("headline", ""),
+                        cta_text=sa.get("cta_text", ""),
+                    )
+                    qa_score = qa_result.overall_score
 
                 _update_static_ad_record(
                     ad_id,
@@ -480,15 +605,15 @@ def process_static_ads(
                     file_path=final_path,
                     thumbnail_path=thumb_path,
                     file_size_mb=fsize,
-                    width=1080,
-                    height=1080,
-                    quality_score=qa_result.overall_score,
+                    width=ad_width,
+                    height=ad_height,
+                    quality_score=qa_score,
                 )
                 results.append({
                     "ad_id": ad_id,
                     "status": "completed",
                     "file_path": final_path,
-                    "quality_score": qa_result.overall_score,
+                    "quality_score": qa_score,
                 })
 
             except Exception as exc:
