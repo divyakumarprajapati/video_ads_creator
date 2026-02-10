@@ -28,6 +28,10 @@ class BrandFonts(BaseModel):
 class BrandIdentity(BaseModel):
     """Everything we need to keep video output on-brand."""
     brand_name: str = Field(..., min_length=1, max_length=256)
+    business_type: Optional[str] = Field(
+        None,
+        description="E.g. SaaS, ecommerce, agency, local service",
+    )
     tagline: Optional[str] = None
     logo_url: Optional[str] = Field(
         None,
