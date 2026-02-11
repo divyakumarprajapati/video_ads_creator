@@ -139,6 +139,8 @@ class CampaignService:
             duration=payload.duration_preference,
             product_variants=payload.product_specific_variants,
             brand_variants=payload.general_brand_variants,
+            static_ad_prompt=payload.prompt,
+            static_ads_count=payload.ads_count,
             db=self.db,
         )
         campaign.strategy_plan = strategy.to_dict()

@@ -442,6 +442,7 @@ async def generate_static_ad_copy_ai(
     target_age_max: int = 65,
     target_gender: str = "all",
     num_variants: int = 3,
+    user_prompt: Optional[str] = None,
 ) -> Optional[List[StaticAdCopy]]:
     """
     Generate static ad copy via OpenAI.
@@ -466,7 +467,9 @@ async def generate_static_ad_copy_ai(
     age_group = _classify_age_group(target_age_min, target_age_max)
     price_tier = _classify_price_tier(price, product_category)
 
+    prompt_line = f"User prompt (most important): {user_prompt}\n" if user_prompt else ""
     user_prompt = f"""\
+{prompt_line}\
 Brand: {brand_name}
 Brand voice: {brand_voice}, Brand tone: {brand_tone}
 Product: {product_name}

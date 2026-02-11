@@ -41,6 +41,16 @@ class CampaignCreate(BaseModel):
     """
     campaign_name: str = Field(..., min_length=1, max_length=256)
     project_id: str = Field("default", max_length=64)
+    prompt: Optional[str] = Field(
+        None,
+        description="Optional user prompt to guide static ad copy generation.",
+    )
+    ads_count: Optional[int] = Field(
+        None,
+        ge=1,
+        le=200,
+        description="Optional override for total static ads to generate.",
+    )
 
     brand_identity: BrandIdentity
     market_research: MarketResearch

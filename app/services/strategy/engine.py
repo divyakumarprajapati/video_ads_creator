@@ -67,10 +67,14 @@ def _dedupe_urls(urls: List[str]) -> List[str]:
     return cleaned
 
 
-def _static_ad_limits(num_products: int) -> tuple[int, int]:
-    """Return (per_product_limit, brand_limit) based on settings."""
-    max_total = max(0, settings.static_ads_max_total)
-    min_total = max(0, settings.static_ads_min_total)
+def _static_ad_limits(num_products: int, *, static_ads_count: Optional[int] = None) -> tuple[int, int]:
+    """Return (per_product_limit, brand_limit) based on settings or overrides."""
+    if static_ads_count is not None:
+        max_total = max(0, static_ads_count)
+        min_total = max_total
+    else:
+        max_total = max(0, settings.static_ads_max_total)
+        min_total = max(0, settings.static_ads_min_total)
     if max_total <= 0:
         return 0, 0
 
@@ -131,6 +135,19 @@ def _has_any_images(products: List[ProductInput]) -> bool:
                                getattr(prod, "image_urls", None)):
             return True
     return False
+
+
+def _prompt_to_copy(prompt: str) -> dict:
+    text = (prompt or "").strip()
+    parts = [p.strip() for p in text.replace("\n", " ").split(".") if p.strip()]
+    headline = (parts[0] if parts else text)[:100]
+    subheading = (parts[1] if len(parts) > 1 else "")[:200]
+    return {
+        "headline": headline,
+        "subheading": subheading,
+        "cta_text": "",
+        "body_text": text[:500],
+    }
 
 
 @dataclass
@@ -212,6 +229,8 @@ async def generate_campaign_strategy(
     duration: int,
     product_variants: int = 3,
     brand_variants: int = 3,
+    static_ad_prompt: Optional[str] = None,
+    static_ads_count: Optional[int] = None,
     db: Optional[AsyncSession] = None,
 ) -> CampaignStrategy:
     """
@@ -273,7 +292,11 @@ async def generate_campaign_strategy(
         select_brand_static_templates,
     )
 
-    per_product_static_limit, brand_static_limit = _static_ad_limits(len(products))
+    per_product_static_limit, brand_static_limit = _static_ad_limits(
+        len(products),
+        static_ads_count=static_ads_count,
+    )
+    prompt_text = (static_ad_prompt or "").strip()
     no_image_mode = not _has_any_images(products)
 
     # 4. Per-product creative plans
@@ -364,7 +387,28 @@ async def generate_campaign_strategy(
         )
 
         ai_static_copies = None
-        if (
+        if prompt_text and settings.openai_enabled:
+            ai_static_copies = await generate_static_ad_copy_ai(
+                product_name=prod.product_name,
+                product_description=prod.product_description,
+                product_category=prod.product_category,
+                product_features=prod.product_features,
+                price=prod.price,
+                tags=prod.tags,
+                brand_name=brand.brand_name,
+                brand_voice=brand.voice,
+                brand_tone=brand.tone,
+                campaign_goal=goal.value,
+                message_angle=angles[0].value,
+                template_name=static_ad_templates[0].template_name if static_ad_templates else "Hero Product",
+                trending_keywords=market.trending_keywords,
+                target_age_min=market.target_audience_age_min,
+                target_age_max=market.target_audience_age_max,
+                target_gender=market.target_audience_gender,
+                num_variants=static_variant_count,
+                user_prompt=prompt_text,
+            )
+        elif (
             settings.static_ad_copy_provider == "openai"
             and settings.openai_enabled
             and (getattr(prod, "product_image_url", None) or getattr(prod, "product_image_urls", None))
@@ -396,13 +440,19 @@ async def generate_campaign_strategy(
             sa_template = static_ad_templates[vi % len(static_ad_templates)] if static_ad_templates else None
             tpl_category = sa_template.category if sa_template else "hero_product_showcase"
 
-            # Use AI static copy if available, else smart deterministic
+            # Use prompt/AI static copy if available, else smart deterministic
             if ai_static_copies and vi < len(ai_static_copies):
                 sa_copy = ai_static_copies[vi]
                 headline = sa_copy.headline
                 subheading = sa_copy.subheading
                 cta = sa_copy.cta_text
                 body_text = sa_copy.body_text
+            elif prompt_text:
+                prompt_copy = _prompt_to_copy(prompt_text)
+                headline = prompt_copy["headline"]
+                subheading = prompt_copy["subheading"]
+                cta = prompt_copy["cta_text"]
+                body_text = prompt_copy["body_text"]
             else:
                 sa_copy = generate_static_ad_copy_deterministic(
                     product_name=prod.product_name,
@@ -527,7 +577,33 @@ async def generate_campaign_strategy(
         trending_keywords=market.trending_keywords,
     )
 
-    from app.services.static_ad.copywriter import generate_brand_static_ad_copy_deterministic
+    from app.services.static_ad.copywriter import (
+        generate_brand_static_ad_copy_deterministic,
+        generate_static_ad_copy_ai,
+    )
+
+    brand_prompt_copies = None
+    if prompt_text and settings.openai_enabled:
+        brand_prompt_copies = await generate_static_ad_copy_ai(
+            product_name=brand.brand_name,
+            product_description=None,
+            product_category=None,
+            product_features=None,
+            price=None,
+            tags=None,
+            brand_name=brand.brand_name,
+            brand_voice=brand.voice,
+            brand_tone=brand.tone,
+            campaign_goal=goal.value,
+            message_angle=angles[0].value,
+            template_name=brand_static_templates[0].template_name if brand_static_templates else "Brand Collection",
+            trending_keywords=market.trending_keywords,
+            target_age_min=market.target_audience_age_min,
+            target_age_max=market.target_audience_age_max,
+            target_gender=market.target_audience_gender,
+            num_variants=brand_static_count,
+            user_prompt=prompt_text,
+        )
 
     brand_static_ad_variants: List[StaticAdVariantPlan] = []
     for vi in range(brand_static_count):
@@ -536,13 +612,25 @@ async def generate_campaign_strategy(
         sa_tpl = brand_static_templates[vi % len(brand_static_templates)] if brand_static_templates else None
         tpl_category = sa_tpl.category if sa_tpl else "benefit_grid_triple"
 
-        # Use AI brand copy if available, else smart deterministic
-        if ai_brand_copies is not None and vi < len(ai_brand_copies):
+        # Use prompt/AI brand copy if available, else smart deterministic
+        if brand_prompt_copies and vi < len(brand_prompt_copies):
+            ai_b = brand_prompt_copies[vi]
+            headline = ai_b.headline
+            subheading = ai_b.subheading
+            cta = ai_b.cta_text
+            body_text = ai_b.body_text
+        elif ai_brand_copies is not None and vi < len(ai_brand_copies):
             ai_b = ai_brand_copies[vi]
             headline = ai_b.primary_message
             subheading = ai_b.secondary_message
             cta = ai_b.cta_text
             body_text = ", ".join(product_names[:5])
+        elif prompt_text:
+            prompt_copy = _prompt_to_copy(prompt_text)
+            headline = prompt_copy["headline"]
+            subheading = prompt_copy["subheading"]
+            cta = prompt_copy["cta_text"]
+            body_text = prompt_copy["body_text"]
         else:
             sa_copy = generate_brand_static_ad_copy_deterministic(
                 brand_name=brand.brand_name,
