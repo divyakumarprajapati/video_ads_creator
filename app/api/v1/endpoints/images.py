@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from app.core.config import get_settings
-from app.utils.image import extract_subject_rgba, trim_transparent
+from app.utils.image import remove_background_best, trim_transparent
 
 
 router = APIRouter(prefix="/images", tags=["Images"])
@@ -29,7 +29,7 @@ def _prepare_product_image(
     pad_to_square: bool,
 ) -> Image.Image:
     try:
-        img = extract_subject_rgba(img)
+        img = remove_background_best(img)
     except Exception:
         pass
     try:

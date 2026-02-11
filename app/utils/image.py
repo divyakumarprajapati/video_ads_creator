@@ -226,6 +226,22 @@ def extract_subject_rgba(
     return out
 
 
+def remove_background_best(img: Image.Image) -> Image.Image:
+    """
+    Best-effort background removal.
+    Prefer rembg when available; fall back to heuristic extraction.
+    """
+    try:
+        from rembg import remove
+
+        out = remove(img)
+        if isinstance(out, Image.Image):
+            return out
+        return Image.open(BytesIO(out)).convert("RGBA")
+    except Exception:
+        return extract_subject_rgba(img)
+
+
 def enhance_image(
     img: Image.Image,
     *,
