@@ -53,11 +53,22 @@ def _resolve_product_image_source(
     product_assets_map: Optional[Dict[str, Dict]] = None,
     *,
     prefer_no_bg: bool = False,
+    prefer_original: bool = False,
 ) -> str:
     if not product_id:
         return ""
     if product_assets_map and product_id in product_assets_map:
         assets = product_assets_map[product_id]
+        if prefer_original:
+            original = assets.get("original") or product_map.get(product_id, {}).get("product_image_url", "")
+            if original:
+                return original
+            return (
+                assets.get("upscaled")
+                or assets.get("no_bg")
+                or assets.get("composite")
+                or ""
+            )
         if prefer_no_bg:
             return (
                 assets.get("no_bg")
@@ -468,6 +479,12 @@ def process_static_ads(
         brand_colors = brand_identity.get("colors", {})
         brand_name = brand_identity.get("brand_name", "")
         logo_url = brand_identity.get("logo_url")
+        business_type = (brand_identity.get("business_type") or "").strip().lower()
+        use_raw_images = business_type in {
+            "saas",
+            "software as a service",
+            "software-as-a-service",
+        }
 
         results = []
         for sa in static_ad_records:
@@ -495,10 +512,17 @@ def process_static_ads(
                 image_url = sa.get("image_url", "")
                 product_id = str(sa.get("product_id") or "")
                 product_image_source = _resolve_product_image_source(
-                    product_id, product_map, product_assets_map
+                    product_id,
+                    product_map,
+                    product_assets_map,
+                    prefer_original=use_raw_images,
                 )
                 anthropic_product_source = _resolve_product_image_source(
-                    product_id, product_map, product_assets_map, prefer_no_bg=True
+                    product_id,
+                    product_map,
+                    product_assets_map,
+                    prefer_no_bg=not use_raw_images,
+                    prefer_original=use_raw_images,
                 )
 
                 # image_url from user takes priority for the hero shot
@@ -538,7 +562,11 @@ def process_static_ads(
                             for prod in collab_products:
                                 pid = str(prod.get("id"))
                                 src = _resolve_product_image_source(
-                                    pid, product_map, product_assets_map, prefer_no_bg=True
+                                    pid,
+                                    product_map,
+                                    product_assets_map,
+                                    prefer_no_bg=not use_raw_images,
+                                    prefer_original=use_raw_images,
                                 )
                                 if src:
                                     product_images.append(src)
@@ -565,6 +593,7 @@ def process_static_ads(
                                 variant_id=variant_id,
                                 ad_id=ad_id,
                                 ad_type=ad_type,
+                                use_raw_images=use_raw_images,
                             )
 
                 # Fallback to template-based generator if Anthropic fails
@@ -589,6 +618,7 @@ def process_static_ads(
                         height=ad_height,
                         variant_id=variant_id,
                         ad_id=ad_id,  # Pass ad_id to ensure unique filenames per product
+                        use_raw_images=use_raw_images,
                     )
 
                 # Copy to campaign output directory

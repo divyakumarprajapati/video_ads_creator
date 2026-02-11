@@ -328,6 +328,7 @@ def _load_product_image(
     name: str = "prod",
     bg_remove: bool = True,
     brand_color: Tuple[int, int, int] = (100, 100, 100),
+    process_image: bool = True,
 ) -> Optional[Image.Image]:
     """Load and clean a product image (bg removal + enhancement)."""
     if not path_or_url:
@@ -341,10 +342,11 @@ def _load_product_image(
 
     try:
         img = img.convert("RGBA")
-        if bg_remove:
-            img = extract_subject_rgba(img)
-        img = enhance_image(img)
-        img = trim_transparent(img, padding=6)
+        if process_image:
+            if bg_remove:
+                img = extract_subject_rgba(img)
+            img = enhance_image(img)
+            img = trim_transparent(img, padding=6)
         img.thumbnail(target_size, Image.LANCZOS)
         return img
     except Exception as exc:
@@ -551,6 +553,7 @@ class StaticAdGenerator:
     def __init__(self, work_dir: str):
         self.work_dir = work_dir
         os.makedirs(work_dir, exist_ok=True)
+        self._use_raw_images = False
 
     def generate(
         self,
@@ -569,6 +572,7 @@ class StaticAdGenerator:
         height: int = 1080,
         variant_id: int = 1,
         ad_id: Optional[str] = None,
+        use_raw_images: bool = False,
     ) -> str:
         """
         Generate a static ad image.
@@ -603,6 +607,8 @@ class StaticAdGenerator:
             Variant number for output filename.
         ad_id : str, optional
             Unique static ad ID to use for filename (prevents collisions across products).
+        use_raw_images : bool
+            If true, bypass background removal and enhancement for product images.
 
         Returns
         -------
@@ -617,6 +623,8 @@ class StaticAdGenerator:
         output_path = os.path.join(self.work_dir, out_name)
         if os.path.exists(output_path):
             return output_path
+
+        self._use_raw_images = use_raw_images
 
         # Resolve the image to use (image_url takes priority)
         img_source = image_url or product_image_url
@@ -742,6 +750,34 @@ class StaticAdGenerator:
         logger.info("static_ad_generated", template=template.template_id, variant=variant_id)
         return output_path
 
+    def _load_product_image(
+        self,
+        path_or_url: str,
+        target_size: Tuple[int, int],
+        name: str = "prod",
+        bg_remove: bool = True,
+        brand_color: Tuple[int, int, int] = (100, 100, 100),
+    ) -> Optional[Image.Image]:
+        if self._use_raw_images:
+            return _load_product_image(
+                path_or_url,
+                self.work_dir,
+                target_size,
+                name=name,
+                bg_remove=False,
+                brand_color=brand_color,
+                process_image=False,
+            )
+        return _load_product_image(
+            path_or_url,
+            self.work_dir,
+            target_size,
+            name=name,
+            bg_remove=bg_remove,
+            brand_color=brand_color,
+            process_image=True,
+        )
+
     # ── Hero Product Showcase ─────────────────────────────
 
     def _render_hero_product(
@@ -798,9 +834,13 @@ class StaticAdGenerator:
 
         # Product image with drop shadow (right 55%)
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.70)), "hero_prod", brand_color=primary)
+            prod_img = self._load_product_image(img_source, (int(w * 0.48), int(h * 0.70)), "hero_prod", brand_color=primary)
             if prod_img:
-                prod_with_shadow = _add_drop_shadow(prod_img, offset=(6, 6), blur_radius=12)
+                prod_with_shadow = prod_img if self._use_raw_images else _add_drop_shadow(
+                    prod_img,
+                    offset=(6, 6),
+                    blur_radius=12,
+                )
                 px = int(w * 0.50) + (int(w * 0.50) - prod_with_shadow.width) // 2
                 py = (h - prod_with_shadow.height) // 2
                 img.paste(prod_with_shadow, (px, py), prod_with_shadow)
@@ -910,7 +950,7 @@ class StaticAdGenerator:
             img.paste(card_shadow, (card_x - 6, card_y - 6), card_shadow)
             img.paste(card, (card_x, card_y), card)
 
-            prod_img = _load_product_image(img_source, self.work_dir, (int(card_w * 0.72), int(card_h * 0.72)), "center_prod")
+            prod_img = self._load_product_image(img_source, (int(card_w * 0.72), int(card_h * 0.72)), "center_prod")
             if prod_img:
                 px = card_x + (card_w - prod_img.width) // 2
                 py = card_y + (card_h - prod_img.height) // 2
@@ -973,9 +1013,10 @@ class StaticAdGenerator:
 
         # Product on lower-right
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.48), int(h * 0.60)), "diag_prod")
+            prod_img = self._load_product_image(img_source, (int(w * 0.48), int(h * 0.60)), "diag_prod")
             if prod_img:
-                prod_img = _add_drop_shadow(prod_img, offset=(8, 10), blur_radius=16)
+                if not self._use_raw_images:
+                    prod_img = _add_drop_shadow(prod_img, offset=(8, 10), blur_radius=16)
                 px = int(w * 0.52) + (int(w * 0.45) - prod_img.width) // 2
                 py = int(h * 0.40)
                 img.paste(prod_img, (px, py), prod_img)
@@ -1019,7 +1060,7 @@ class StaticAdGenerator:
         img.paste(card, (card_x, card_y), card)
 
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(card_w * 0.78), int(card_h * 0.70)), "float_prod")
+            prod_img = self._load_product_image(img_source, (int(card_w * 0.78), int(card_h * 0.70)), "float_prod")
             if prod_img:
                 px = card_x + (card_w - prod_img.width) // 2
                 py = card_y + int(card_h * 0.12)
@@ -1088,7 +1129,7 @@ class StaticAdGenerator:
 
         # Product + reflection
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.5), int(h * 0.42)), "refl_prod")
+            prod_img = self._load_product_image(img_source, (int(w * 0.5), int(h * 0.42)), "refl_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = int(h * 0.18)
@@ -1240,9 +1281,10 @@ class StaticAdGenerator:
 
         # Product image on after side
         if img_source:
-            prod_img = _load_product_image(
-                img_source, self.work_dir,
-                (int(w * 0.4), int(split_h * 0.7)), "ba_prod",
+            prod_img = self._load_product_image(
+                img_source,
+                (int(w * 0.4), int(split_h * 0.7)),
+                "ba_prod",
             )
             if prod_img:
                 px = mid_x + (w // 2 - prod_img.width) // 2
@@ -1356,7 +1398,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "urg_prod")
+            prod_img = self._load_product_image(img_source, (int(w * 0.45), int(h * 0.35)), "urg_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = int(h * 0.52)
@@ -1505,7 +1547,7 @@ class StaticAdGenerator:
         # Product image centered (30% canvas)
         if img_source:
             target = int(min(w, h) * 0.35)
-            prod_img = _load_product_image(img_source, self.work_dir, (target, target), "min_prod")
+            prod_img = self._load_product_image(img_source, (target, target), "min_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = (h - prod_img.height) // 2 - int(h * 0.02)
@@ -1586,7 +1628,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.35), int(sol_h * 0.6)), "pas_prod")
+            prod_img = self._load_product_image(img_source, (int(w * 0.35), int(sol_h * 0.6)), "pas_prod")
             if prod_img:
                 px = int(w * 0.06)
                 py = sol_y + (sol_h - prod_img.height) // 2
@@ -1678,7 +1720,7 @@ class StaticAdGenerator:
 
         # Left half: product/feature image
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (w // 2 - 20, int(h * 0.7)), "feat_prod")
+            prod_img = self._load_product_image(img_source, (w // 2 - 20, int(h * 0.7)), "feat_prod")
             if prod_img:
                 px = (w // 2 - prod_img.width) // 2
                 py = (h - prod_img.height) // 2
@@ -1830,7 +1872,7 @@ class StaticAdGenerator:
 
         # If we have an image, paste it into the first card
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (card_w - 20, card_h - 50), "ugc_prod")
+            prod_img = self._load_product_image(img_source, (card_w - 20, card_h - 50), "ugc_prod")
             if prod_img:
                 img.paste(prod_img, (margin + 10, card_area_y + 10), prod_img if prod_img.mode == "RGBA" else None)
 
@@ -1879,7 +1921,7 @@ class StaticAdGenerator:
 
         # Product image
         if img_source:
-            prod_img = _load_product_image(img_source, self.work_dir, (int(w * 0.45), int(h * 0.35)), "season_prod")
+            prod_img = self._load_product_image(img_source, (int(w * 0.45), int(h * 0.35)), "season_prod")
             if prod_img:
                 px = (w - prod_img.width) // 2
                 py = int(h * 0.35)

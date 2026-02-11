@@ -18,7 +18,7 @@ from PIL import Image
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.utils.image import download_image, extract_subject_rgba, trim_transparent
+from app.utils.image import download_image, remove_background_best, trim_transparent
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -49,6 +49,7 @@ class AnthropicSvgGenerator:
         variant_id: int = 1,
         ad_id: Optional[str] = None,
         ad_type: str = "product_specific",
+        use_raw_images: bool = False,
     ) -> Optional[str]:
         if not settings.anthropic_api_key:
             return None
@@ -64,7 +65,9 @@ class AnthropicSvgGenerator:
             return output_path
 
         tokens = self._prepare_product_tokens(
-            product_images, product_names=product_names or []
+            product_images,
+            product_names=product_names or [],
+            use_raw_images=use_raw_images,
         )
         if not tokens:
             return None
@@ -185,31 +188,56 @@ class AnthropicSvgGenerator:
             ],
         }
 
-        try:
-            with httpx.Client(timeout=settings.anthropic_request_timeout_s) as client:
-                resp = client.post(
-                    f"{settings.anthropic_base_url.rstrip('/')}/v1/messages",
-                    headers=headers,
-                    json=payload,
-                )
-                resp.raise_for_status()
-                data = resp.json()
-        except Exception as exc:
-            logger.warning("anthropic_request_failed", error=str(exc))
-            return None
+        max_retries = 3
+        max_attempts = max_retries + 1
+        attempt_timeout_s = 180
 
-        try:
-            parts = data.get("content", [])
-            texts = [p.get("text", "") for p in parts if p.get("type") == "text"]
-            return "\n".join([t for t in texts if t]).strip()
-        except Exception:
-            return None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with httpx.Client(timeout=attempt_timeout_s) as client:
+                    resp = client.post(
+                        f"{settings.anthropic_base_url.rstrip('/')}/v1/messages",
+                        headers=headers,
+                        json=payload,
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+
+                parts = data.get("content", [])
+                texts = [p.get("text", "") for p in parts if p.get("type") == "text"]
+                svg_text = "\n".join([t for t in texts if t]).strip()
+                if svg_text:
+                    if attempt > 1:
+                        logger.info(
+                            "anthropic_request_recovered",
+                            attempt=attempt,
+                            max_attempts=max_attempts,
+                        )
+                    return svg_text
+                raise ValueError("anthropic_empty_response")
+            except Exception as exc:
+                logger.warning(
+                    "anthropic_request_failed",
+                    error=str(exc),
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                )
+                if attempt >= max_attempts:
+                    break
+                logger.info(
+                    "anthropic_retry_immediate",
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                )
+
+        return None
 
     def _prepare_product_tokens(
         self,
         product_images: List[str],
         *,
         product_names: List[str],
+        use_raw_images: bool = False,
     ) -> Dict[str, Dict[str, str]]:
         tokens: Dict[str, Dict[str, str]] = {}
         normalize_sizes = len(product_images) > 1
@@ -222,6 +250,7 @@ class AnthropicSvgGenerator:
             data_uri, w, h = self._image_to_svg_data_uri(
                 img,
                 pad_to_square=normalize_sizes,
+                use_raw_images=use_raw_images,
             )
             if not data_uri:
                 continue
@@ -240,6 +269,7 @@ class AnthropicSvgGenerator:
         *,
         max_size: int = 512,
         pad_to_square: bool = False,
+        use_raw_images: bool = False,
     ) -> Tuple[str, int, int]:
         src = path_or_url
         if src.startswith(("http://", "https://")):
@@ -255,7 +285,15 @@ class AnthropicSvgGenerator:
 
                 png_bytes = cairosvg.svg2png(url=src, output_width=max_size, output_height=max_size)
                 img = Image.open(BytesIO(png_bytes)).convert("RGBA")
-                img = _prepare_product_image(img, max_size=max_size, pad_to_square=pad_to_square)
+                if use_raw_images:
+                    img.thumbnail((max_size, max_size), Image.LANCZOS)
+                    if pad_to_square:
+                        canvas = Image.new("RGBA", (max_size, max_size), (0, 0, 0, 0))
+                        offset = ((max_size - img.width) // 2, (max_size - img.height) // 2)
+                        canvas.paste(img, offset, img if img.mode == "RGBA" else None)
+                        img = canvas
+                else:
+                    img = _prepare_product_image(img, max_size=max_size, pad_to_square=pad_to_square)
                 return _raster_to_svg_data_uri(img, max_size=max_size, pad_to_square=pad_to_square)
             except Exception:
                 with open(src, "rb") as f:
@@ -265,7 +303,15 @@ class AnthropicSvgGenerator:
                 return f"data:image/svg+xml;base64,{b64}", max_size, max_size
 
         img = Image.open(src).convert("RGBA")
-        img = _prepare_product_image(img, max_size=max_size, pad_to_square=pad_to_square)
+        if use_raw_images:
+            img.thumbnail((max_size, max_size), Image.LANCZOS)
+            if pad_to_square:
+                canvas = Image.new("RGBA", (max_size, max_size), (0, 0, 0, 0))
+                offset = ((max_size - img.width) // 2, (max_size - img.height) // 2)
+                canvas.paste(img, offset, img if img.mode == "RGBA" else None)
+                img = canvas
+        else:
+            img = _prepare_product_image(img, max_size=max_size, pad_to_square=pad_to_square)
         return _raster_to_svg_data_uri(img, max_size=max_size, pad_to_square=pad_to_square)
 
     def _inline_svg_to_svg_data_uri(
@@ -336,6 +382,7 @@ class AnthropicSvgGenerator:
             "- Do not show product names, filenames, URLs, asset IDs, or placeholder tokens as text.\n"
             "- Include 1 product image for product-specific ads; 2–3 for collaboration ads.\n"
             "- For multiple product images, keep consistent visual size and balanced spacing (grid or row), no overlaps.\n"
+            "- Reserve a clear image placement zone (left/right/top/bottom or centered card) and keep text in a separate region.\n"
             "- Product images should appear with transparent backgrounds; add subtle shadows if needed.\n"
             "- Use a full-bleed background in brand colors (solid or subtle gradient), not default white unless brand background is white.\n"
             "- Keep all text within safe margins (~6% padding).\n"
@@ -546,7 +593,7 @@ def _prepare_product_image(
     pad_to_square: bool,
 ) -> Image.Image:
     try:
-        img = extract_subject_rgba(img)
+        img = remove_background_best(img)
     except Exception:
         pass
     try:
