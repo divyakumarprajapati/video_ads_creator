@@ -11,6 +11,7 @@ from app.api.v1.endpoints.campaigns import router as campaigns_router
 from app.api.v1.endpoints.health import router as health_router
 from app.api.v1.endpoints.images import router as images_router
 from app.api.v1.endpoints.projects import router as projects_router
+from app.api.v1.endpoints.static_ads import router as static_ads_router
 from app.api.v1.endpoints.templates import router as templates_router
 
 api_router = APIRouter()
@@ -21,3 +22,4 @@ api_router.include_router(campaigns_router)
 api_router.include_router(templates_router)
 api_router.include_router(projects_router)
 api_router.include_router(images_router)
+api_router.include_router(static_ads_router)
