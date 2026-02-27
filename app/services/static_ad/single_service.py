@@ -23,6 +23,25 @@ class SingleStaticAdService:
     def __init__(self, *, output_root: str):
         self.output_root = output_root
 
+    def _template_requires_image(self, template) -> bool:
+        category = (getattr(template, "category", "") or "").lower()
+        return category.startswith(
+            (
+                "hero_product_showcase",
+                "lifestyle_context",
+                "testimonial_trust",
+                "before_after",
+                "feature_highlight",
+                "urgency_countdown",
+                "minimalist_luxury",
+                "problem_agitation_solution",
+                "ugc_authenticity",
+                "seasonal_themed",
+                "product_grid_showcase",
+                "product_carousel_preview",
+            )
+        )
+
     async def create_single_ad(self, payload: SingleStaticAdCreate, user_id: str) -> Optional[Dict]:
         """
         Generate a single static ad from the payload.
@@ -44,7 +63,12 @@ class SingleStaticAdService:
             "software-as-a-service",
         }
 
-        if payload.image_url:
+        raw_image_url = (payload.image_url or "").strip()
+        if raw_image_url.lower() in {"none", "null", "undefined"}:
+            raw_image_url = ""
+        image_url = raw_image_url or None
+
+        if image_url:
             width = payload.width or 900
             height = payload.height or 1200
         else:
@@ -61,7 +85,6 @@ class SingleStaticAdService:
         if not copy:
             return None
 
-        image_url = payload.image_url
         style_hint = payload.style_hint or ""
 
         output_path = None
@@ -85,14 +108,37 @@ class SingleStaticAdService:
                 ad_type="product_specific",
                 use_raw_images=True,
             )
+        else:
+            # Prefer brand-only Anthropic SVG when no image is provided.
+            svg_generator = AnthropicSvgGenerator(work_dir)
+            output_path = svg_generator.generate_brand_only(
+                headline=copy["headline"],
+                subheading=copy.get("subheading", ""),
+                cta_text=copy.get("cta_text", ""),
+                body_text=copy.get("body_text", ""),
+                brand_colors=brand_colors,
+                brand_name=brand_name,
+                logo_svg=brand_identity.get("logo_url") or "",
+                market_research=payload.market_research.model_dump(),
+                style_hint=style_hint,
+                width=width,
+                height=height,
+                variant_id=1,
+                ad_id=ad_id,
+                ad_type="general_brand",
+            )
 
         if not output_path:
             # Fallback to template-based generator (supports no-image layouts).
             template = None
             if payload.template_id:
                 template = get_template_by_id(payload.template_id)
+                if template and not image_url and self._template_requires_image(template):
+                    template = None
             if not template:
                 templates = get_all_templates()
+                if not image_url:
+                    templates = [t for t in templates if not self._template_requires_image(t)]
                 template = templates[0] if templates else None
             if not template:
                 return None
