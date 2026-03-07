@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import os
 import re
 from io import BytesIO
@@ -132,7 +133,6 @@ class AnthropicSvgGenerator:
         if os.path.exists(output_path):
             return output_path
 
-        tokens = self._prepare_logo_token(logo_svg) if logo_svg else {}
         prompt = self._build_brand_only_prompt(
             headline=headline,
             subheading=subheading,
@@ -144,7 +144,6 @@ class AnthropicSvgGenerator:
             width=width,
             height=height,
             ad_type=ad_type,
-            logo_tokens=tokens,
             market_research=market_research or {},
         )
 
@@ -153,10 +152,17 @@ class AnthropicSvgGenerator:
             return None
 
         svg = self._extract_svg(svg_text)
-        if tokens:
-            svg = self._apply_tokens(svg, tokens)
         svg = self._ensure_svg_root(svg, width, height)
         svg = self._ensure_background(svg, brand_colors.get("background", "#FFFFFF"))
+        svg = self._ensure_logo_slot(svg, width, height)
+        svg = self._inject_logo(
+            svg,
+            logo_svg,
+            width,
+            height,
+            brand_name=brand_name,
+            brand_colors=brand_colors,
+        )
 
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(svg)
@@ -402,7 +408,6 @@ class AnthropicSvgGenerator:
         width: int,
         height: int,
         ad_type: str,
-        logo_tokens: Dict[str, Dict[str, str]],
         market_research: Dict[str, Any],
     ) -> str:
         primary = brand_colors.get("primary", "#1F2937")
@@ -411,12 +416,6 @@ class AnthropicSvgGenerator:
         bg = brand_colors.get("background", "#FFFFFF")
         text = brand_colors.get("text", "#111827")
 
-        token_lines = []
-        for token, info in logo_tokens.items():
-            token_lines.append(
-                f"- token: {{{{{token}}}}} | name: {info['name']} | size: {info['width']}x{info['height']}"
-            )
-
         style_line = ""
         if style_hint:
             style_line = f"Style hint: {style_hint}\n\n"
@@ -424,15 +423,10 @@ class AnthropicSvgGenerator:
         market_line = _format_market_context(market_research)
         market_block = f"{market_line}\n" if market_line else ""
 
-        placeholders = ""
-        if token_lines:
-            placeholders = "Logo placeholder:\n" + "\n".join(token_lines) + "\n\n"
-
         return (
             "Create a premium static advertisement as a single SVG.\n"
             f"Canvas: {width}x{height} (4:3 landscape), viewBox='0 0 {width} {height}'.\n"
             f"Ad type: {ad_type}.\n"
-            + placeholders +
             f"Brand: {brand_name}\n"
             f"Colors: primary={primary}, secondary={secondary}, accent={accent}, "
             f"background={bg}, text={text}\n"
@@ -447,11 +441,163 @@ class AnthropicSvgGenerator:
             "- Exactly ONE CTA button. No extra badges, tags, or multiple buttons.\n"
             "- No product photos or mockups. Do not invent product images.\n"
             "- Use only the provided headline + one description line + one CTA. Do not add extra text.\n"
-            "- If a logo placeholder is provided, include it; otherwise, use the brand name as text.\n"
+            "- Include a logo placeholder slot as a <rect> with id=\"logo-slot\" and data-logo-slot=\"true\".\n"
+            "- The logo slot should be in a clean area near the top (left or right), approx 6-10% width and 6-10% height.\n"
+            "- Do NOT embed any image data or base64 strings; only create the placeholder rect.\n"
+            "- Use the brand name as text elsewhere; do not put logo-slot as visible text.\n"
             "- Use a full-bleed background in brand colors (solid or subtle gradient), not default white unless brand background is white.\n"
             "- Keep all text within safe margins (~6% padding).\n"
             "- Output only SVG (no markdown)."
         )
+
+    def _ensure_logo_slot(self, svg: str, width: int, height: int) -> str:
+        if re.search(r'(<[^>]+id="logo-slot"|data-logo-slot="true")', svg, flags=re.I):
+            return svg
+
+        slot_w = max(64, int(width * 0.16))
+        slot_h = max(24, int(height * 0.08))
+        x = int(width * 0.03)
+        y = int(height * 0.06)
+        rect = (
+            f'<rect id="logo-slot" data-logo-slot="true" '
+            f'x="{x}" y="{y}" width="{slot_w}" height="{slot_h}" '
+            f'fill="none" stroke="none"/>'
+        )
+
+        svg_tag = re.search(r"<svg[^>]*>", svg, flags=re.I | re.S)
+        if not svg_tag:
+            return svg
+        return svg.replace(svg_tag.group(0), svg_tag.group(0) + rect, 1)
+
+    def _inject_logo(
+        self,
+        svg: str,
+        logo_svg: str,
+        width: int,
+        height: int,
+        *,
+        brand_name: str = "",
+        brand_colors: Optional[Dict[str, str]] = None,
+    ) -> str:
+        if not logo_svg:
+            return svg
+
+        try:
+            token = self._prepare_logo_token(logo_svg)
+        except Exception:
+            return svg
+        if not token:
+            return svg
+
+        info = token.get("LOGO") or {}
+        data_uri = info.get("data_uri", "")
+        if not data_uri:
+            return svg
+
+        rect_match = re.search(
+            r'(<rect[^>]*(?:id="logo-slot"|data-logo-slot="true")[^>]*?/?>)',
+            svg,
+            flags=re.I | re.S,
+        )
+        if not rect_match:
+            return svg
+
+        rect_tag = rect_match.group(1)
+
+        def _attr(tag: str, name: str, fallback: float) -> str:
+            m = re.search(rf'{name}="([^"]+)"', tag)
+            return m.group(1) if m else str(int(fallback))
+
+        x_raw = _attr(rect_tag, "x", width * 0.03)
+        y_raw = _attr(rect_tag, "y", height * 0.06)
+        w_raw = _attr(rect_tag, "width", width * 0.16)
+        h_raw = _attr(rect_tag, "height", height * 0.08)
+
+        def _num(val: str, fallback: float) -> float:
+            try:
+                return float(val)
+            except Exception:
+                return float(fallback)
+
+        x = _num(x_raw, width * 0.04)
+        y = _num(y_raw, height * 0.06)
+        w = _num(w_raw, width * 0.16)
+        h = _num(h_raw, height * 0.08)
+
+        image_tag = (
+            f'<image href="{data_uri}" x="{int(x)}" y="{int(y)}" '
+            f'width="{int(w)}" height="{int(h)}" '
+            f'preserveAspectRatio="xMidYMid meet"/>'
+        )
+
+        # Replace the full logo slot rect element (paired first, then self-closing).
+        svg, n = re.subn(
+            r'<rect[^>]*(?:id="logo-slot"|data-logo-slot="true")[^>]*>.*?</rect>',
+            image_tag,
+            svg,
+            count=1,
+            flags=re.I | re.S,
+        )
+        if n:
+            return self._ensure_brand_label(svg, brand_name, x, y, w, h, brand_colors)
+
+        svg, _ = re.subn(
+            r'<rect[^>]*(?:id="logo-slot"|data-logo-slot="true")[^>]*?/?>',
+            image_tag,
+            svg,
+            count=1,
+            flags=re.I | re.S,
+        )
+        return self._ensure_brand_label(svg, brand_name, x, y, w, h, brand_colors)
+
+    def _ensure_brand_label(
+        self,
+        svg: str,
+        brand_name: str,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        brand_colors: Optional[Dict[str, str]],
+    ) -> str:
+        if not brand_name:
+            return svg
+        if re.search(r'data-brand-name="true"', svg, flags=re.I):
+            return svg
+
+        safe_name = html.escape(str(brand_name).strip())
+        if not safe_name:
+            return svg
+
+        # Remove any existing brand-name-only text nodes to avoid duplicates.
+        escaped = re.escape(safe_name)
+        svg = re.sub(
+            rf'<text[^>]*>\s*(?:<tspan[^>]*>\s*)?{escaped}\s*(?:</tspan>)?\s*</text>',
+            "",
+            svg,
+            flags=re.I | re.S,
+        )
+
+        text_color = "#111827"
+        if brand_colors:
+            text_color = brand_colors.get("text", text_color)
+
+        gap = max(8, int(w * 0.2))
+        text_x = int(x + w + gap)
+        text_y = int(y + (h / 2))
+        font_size = int(min(max(h * 0.6, 14), 28))
+
+        text_tag = (
+            f'<text data-brand-name="true" x="{text_x}" y="{text_y}" '
+            f'font-size="{font_size}" font-weight="700" '
+            f'fill="{text_color}" dominant-baseline="middle" '
+            f'font-family="Inter, Arial, sans-serif">{safe_name}</text>'
+        )
+
+        svg_tag = re.search(r"<svg[^>]*>", svg, flags=re.I | re.S)
+        if not svg_tag:
+            return svg
+        return svg.replace(svg_tag.group(0), svg_tag.group(0) + text_tag, 1)
 
     def _prepare_logo_token(self, logo_svg: str) -> Dict[str, Dict[str, str]]:
         src = logo_svg.strip()
