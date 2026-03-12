@@ -86,6 +86,9 @@ class S3Storage:
             ExpiresIn=expires_in,
         )
 
+    def public_url(self, s3_key: str) -> str:
+        return f"{settings.s3_public_url}/{s3_key}"
+
     # ── Delete ─────────────────────────────────────────────
 
     def delete_key(self, s3_key: str) -> None:

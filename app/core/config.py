@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # ── Feature Flags (local-first defaults) ───────────────
     use_celery: bool = False          # False = run workers in-process (thread)
     redis_enabled: bool = False       # False = in-memory rate-limit & progress
-    storage_backend: str = "local"    # "local" or "s3"
+    storage_backend: str = "local"    # "local", "s3", or "gcs"
 
     # ── Redis (only used when redis_enabled=True) ──────────
     redis_url: str = "redis://localhost:6379/0"
@@ -75,6 +75,15 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "video-ads"
     s3_region: str = "us-east-1"
     s3_public_url: str = "http://localhost:9000/video-ads"
+
+    # ── GCS Storage (only used when storage_backend="gcs") ──
+    gcs_project: str = ""
+    gcs_bucket_name: str = "video-ads"
+    gcs_credentials_json: str = ""  # optional service-account JSON content
+    gcs_location: str = "US"
+    gcs_public_url: str = ""        # default: https://storage.googleapis.com/<bucket>
+    gcs_make_public: bool = True
+    gcs_signed_url_expiry_seconds: int = 3600
 
     # ── OpenAI (for ad-copy generation) ──────────────────────
     openai_api_key: str = ""              # set to enable AI copywriting

@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.enums import (
     CampaignGoal,
     CampaignStatus,
@@ -52,7 +53,8 @@ from app.schemas.campaign import (
 )
 from app.schemas.product import ProductOut
 from app.services.strategy.engine import generate_campaign_strategy
-from app.services.asset.paths import resolve_local_asset_path, to_relative_asset_path
+from app.services.asset.paths import resolve_local_asset_path, to_relative_asset_path, to_storage_key
+from app.services.storage import get_storage
 
 logger = get_logger(__name__)
 
@@ -357,6 +359,25 @@ class CampaignService:
         self, campaign_id: uuid.UUID, user_id: str
     ) -> CampaignResultsOut:
         campaign = await self._get_campaign(campaign_id, user_id)
+        settings = get_settings()
+        storage = get_storage()
+
+        def _public_url_for_rel(rel_path: str | None) -> str | None:
+            if not rel_path:
+                return None
+            key = rel_path
+            if settings.storage_backend != "local":
+                key = to_storage_key(rel_path)
+            if not key:
+                return None
+            try:
+                if settings.storage_backend == "gcs" and not settings.gcs_make_public:
+                    return storage.presigned_url(
+                        key, expires_in=settings.gcs_signed_url_expiry_seconds
+                    )
+                return storage.public_url(key)
+            except Exception:
+                return None
 
         products_out = [
             ProductOut.model_validate(p) for p in campaign.products
@@ -368,6 +389,7 @@ class CampaignService:
             for e in v.exports:
                 out = PlatformExportOut.model_validate(e)
                 out.file_path = to_relative_asset_path(out.file_path)
+                out.public_url = _public_url_for_rel(out.file_path)
                 exports.append(out)
 
             thumb_rel = to_relative_asset_path(v.thumbnail_path)
@@ -401,6 +423,8 @@ class CampaignService:
                 quality_score=v.quality_score,
                 file_path=file_rel,
                 thumbnail_path=thumb_rel,
+                file_url=_public_url_for_rel(file_rel),
+                thumbnail_url=_public_url_for_rel(thumb_rel),
                 file_size_mb=v.file_size_mb,
                 duration_seconds=v.duration_seconds,
                 exports=exports,
@@ -431,6 +455,8 @@ class CampaignService:
                 quality_score=sa.quality_score,
                 file_path=sa_file_rel,
                 thumbnail_path=sa_thumb_rel,
+                file_url=_public_url_for_rel(sa_file_rel),
+                thumbnail_url=_public_url_for_rel(sa_thumb_rel),
                 file_size_mb=sa.file_size_mb,
                 width=sa.width,
                 height=sa.height,

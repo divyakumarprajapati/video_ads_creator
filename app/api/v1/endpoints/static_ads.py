@@ -43,6 +43,8 @@ async def create_single_static_ad(
         image_url=result.get("image_url"),
         file_path=to_relative_asset_path(result.get("file_path")),
         thumbnail_path=to_relative_asset_path(result.get("thumbnail_path")),
+        file_url=result.get("file_url"),
+        thumbnail_url=result.get("thumbnail_url"),
         file_size_mb=result.get("file_size_mb"),
         width=result.get("width"),
         height=result.get("height"),

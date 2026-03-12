@@ -14,11 +14,14 @@ from app.core.config import get_settings
 
 
 def get_storage():
-    """Return the configured storage backend (local or S3)."""
+    """Return the configured storage backend (local, S3, or GCS)."""
     settings = get_settings()
     if settings.storage_backend == "s3":
         from app.services.storage.s3 import S3Storage
         return S3Storage()
+    if settings.storage_backend == "gcs":
+        from app.services.storage.gcs import GCSStorage
+        return GCSStorage()
     else:
         from app.services.storage.local import LocalStorage
         return LocalStorage()

@@ -150,6 +150,8 @@ class VideoResultOut(BaseModel):
     quality_score: Optional[float] = None
     file_path: Optional[str] = None
     thumbnail_path: Optional[str] = None
+    file_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     file_size_mb: Optional[float] = None
     duration_seconds: Optional[float] = None
     exports: List[PlatformExportOut] = []
@@ -190,6 +192,8 @@ class StaticAdResultOut(BaseModel):
     quality_score: Optional[float] = None
     file_path: Optional[str] = None
     thumbnail_path: Optional[str] = None
+    file_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     file_size_mb: Optional[float] = None
     width: Optional[int] = None
     height: Optional[int] = None

@@ -11,6 +11,8 @@ from typing import Dict, Optional
 
 from app.core.config import get_settings
 from app.schemas.static_ad import SingleStaticAdCreate
+from app.services.asset.paths import to_relative_asset_path, to_storage_key
+from app.services.storage import get_storage
 from app.services.static_ad.anthropic_svg_generator import AnthropicSvgGenerator
 from app.services.static_ad.generator import StaticAdGenerator
 from app.services.static_ad.template_registry import get_all_templates, get_template_by_id
@@ -182,6 +184,29 @@ class SingleStaticAdService:
             except Exception:
                 thumb_path = final_path
 
+        # Upload to storage and return public URLs.
+        file_url = None
+        thumb_url = None
+        file_key = None
+        thumb_key = None
+        try:
+            storage = get_storage()
+            storage.ensure_bucket()
+            rel_file = to_relative_asset_path(final_path)
+            rel_thumb = to_relative_asset_path(thumb_path)
+            file_key = rel_file if settings.storage_backend == "local" else to_storage_key(rel_file)
+            thumb_key = rel_thumb if settings.storage_backend == "local" else to_storage_key(rel_thumb)
+            if file_key:
+                file_url = storage.upload_file(final_path, file_key)
+            if thumb_key:
+                if os.path.abspath(thumb_path) == os.path.abspath(final_path):
+                    thumb_url = file_url
+                else:
+                    thumb_url = storage.upload_file(thumb_path, thumb_key)
+            print(file_url)
+        except Exception:
+            return None
+
         return {
             "ad_id": ad_id,
             "ad_type": "product_specific" if image_url else "general_brand",
@@ -192,8 +217,10 @@ class SingleStaticAdService:
             "cta_text": copy.get("cta_text"),
             "body_text": copy.get("body_text"),
             "image_url": image_url,
-            "file_path": final_path,
-            "thumbnail_path": thumb_path,
+            "file_path": file_key if settings.storage_backend != "local" else final_path,
+            "thumbnail_path": thumb_key if settings.storage_backend != "local" else thumb_path,
+            "file_url": file_url,
+            "thumbnail_url": thumb_url,
             "file_size_mb": file_size_mb(final_path),
             "width": width,
             "height": height,

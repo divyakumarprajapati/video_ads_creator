@@ -60,6 +60,39 @@ def extract_campaign_id_from_relative_path(relative_path: str) -> Optional[uuid.
         return None
 
 
+def to_storage_key(relative_path: str | None) -> str | None:
+    """
+    Convert a relative asset path into an object-storage key.
+
+    Examples:
+    - campaign_<uuid>/foo.mp4 -> campaigns/<uuid>/foo.mp4
+    - campaigns/<uuid>/foo.mp4 -> campaigns/<uuid>/foo.mp4
+    """
+    if not relative_path:
+        return None
+    rel = str(relative_path).replace("\\", "/").lstrip("/")
+    if rel.startswith("static_ads/") or "/static_ads/" in rel:
+        return f"static_ads/{os.path.basename(rel)}"
+    if rel.startswith("campaigns/"):
+        return rel
+    if rel.startswith("campaign_"):
+        cid = extract_campaign_id_from_relative_path(rel)
+        if cid:
+            prefix = f"campaign_{cid}"
+            rest = rel[len(prefix):].lstrip("/")
+            if rest:
+                return f"campaigns/{cid}/{rest}"
+            return f"campaigns/{cid}"
+        # Fallback: support non-UUID campaign ids (e.g., single-ad user_id).
+        parts = rel.split("/", 1)
+        raw = parts[0][len("campaign_") :]
+        if not raw:
+            return None
+        rest = parts[1] if len(parts) > 1 else ""
+        return f"campaigns/{raw}/{rest}".rstrip("/")
+    return rel
+
+
 def to_relative_asset_path(path: str | None) -> str | None:
     """
     Convert an absolute filesystem path into a safe relative asset path.
@@ -73,8 +106,8 @@ def to_relative_asset_path(path: str | None) -> str | None:
     p = str(path).replace("\\", "/")
     if not os.path.isabs(p):
         rel = p.lstrip("/")
-        # Only accept already-campaign-scoped relative paths; otherwise the API can't serve it.
-        if _CAMPAIGN_PREFIX_RE.match(rel):
+        # Accept campaign-scoped or static-ad keys as relative paths.
+        if _CAMPAIGN_PREFIX_RE.match(rel) or rel.startswith("static_ads/"):
             return rel
         return None
 

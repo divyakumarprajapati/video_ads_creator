@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from app.core.config import get_settings
 from app.core.enums import Platform
+from app.services.asset.paths import to_relative_asset_path, to_storage_key
 from app.services.asset.processor import AssetProcessor
 from app.services.export.encoder import PlatformEncoder
 from app.services.qa.validator import QAValidator
@@ -25,6 +26,7 @@ from app.services.static_ad.generator import StaticAdGenerator
 from app.services.static_ad.anthropic_svg_generator import AnthropicSvgGenerator
 from app.services.static_ad.template_registry import get_template_by_id
 from app.services.static_ad.validator import StaticAdValidator
+from app.services.storage import get_storage
 from app.services.video.generator import VideoGenerator
 from app.utils.file_utils import (
     brand_variant_dir,
@@ -41,6 +43,15 @@ settings = get_settings()
 BASE_OUTPUT = os.environ.get("VIDEO_OUTPUT_DIR", os.path.abspath(
     settings.local_storage_root if settings.storage_backend == "local" else "/tmp/video_ads_output"
 ))
+
+
+def _storage_key_for_path(path: Optional[str]) -> Optional[str]:
+    if not path:
+        return None
+    if settings.storage_backend == "local":
+        return path
+    rel = to_relative_asset_path(path)
+    return to_storage_key(rel) if rel else None
 
 
 # ────────────────────────────────────────────────────────────
@@ -317,16 +328,19 @@ def process_product_videos(
 
             for exp in exports:
                 if exp.file_path:
+                    exp_key = _storage_key_for_path(exp.file_path)
                     _insert_platform_export(
-                        video_id, exp.platform, exp.file_path,
+                        video_id, exp.platform, exp_key,
                         exp.file_size_mb, exp.resolution, exp.aspect_ratio,
                     )
 
+            master_key = _storage_key_for_path(master_out)
+            thumb_key = _storage_key_for_path(exports[0].thumbnail_path if exports else None)
             _update_video_record(
                 video_id, status="completed", generation_progress=100,
-                quality_score=qa_result.overall_score, file_path=master_out,
+                quality_score=qa_result.overall_score, file_path=master_key,
                 file_size_mb=file_size_mb(master),
-                thumbnail_path=exports[0].thumbnail_path if exports else None,
+                thumbnail_path=thumb_key,
                 duration_seconds=float(duration),
             )
             update_video_progress(cid, video_id, 100, "completed",
@@ -408,16 +422,19 @@ def process_brand_videos(
 
             for exp in exports:
                 if exp.file_path:
+                    exp_key = _storage_key_for_path(exp.file_path)
                     _insert_platform_export(
-                        video_id, exp.platform, exp.file_path,
+                        video_id, exp.platform, exp_key,
                         exp.file_size_mb, exp.resolution, exp.aspect_ratio,
                     )
 
+            master_key = _storage_key_for_path(master_out)
+            thumb_key = _storage_key_for_path(exports[0].thumbnail_path if exports else None)
             _update_video_record(
                 video_id, status="completed", generation_progress=100,
-                quality_score=qa_result.overall_score, file_path=master_out,
+                quality_score=qa_result.overall_score, file_path=master_key,
                 file_size_mb=file_size_mb(master),
-                thumbnail_path=exports[0].thumbnail_path if exports else None,
+                thumbnail_path=thumb_key,
                 duration_seconds=float(duration),
             )
             update_video_progress(cid, video_id, 100, "completed",
@@ -470,6 +487,14 @@ def process_static_ads(
         svg_generator = AnthropicSvgGenerator(work)
         qa = StaticAdValidator()
         use_anthropic = bool(settings.use_anthropic_svg_ads and settings.anthropic_api_key)
+        storage = None
+        if settings.storage_backend != "local":
+            try:
+                storage = get_storage()
+                storage.ensure_bucket()
+            except Exception as exc:
+                logger.warning("static_ad_storage_init_failed: %s", exc)
+                storage = None
 
         # Build product lookup
         product_map: Dict[str, Dict] = {}
@@ -642,6 +667,22 @@ def process_static_ads(
                     except Exception:
                         thumb_path = final_path
 
+                # Upload to storage under a flat static_ads/ prefix.
+                if storage:
+                    try:
+                        rel_file = to_relative_asset_path(final_path)
+                        rel_thumb = to_relative_asset_path(thumb_path)
+                        file_key = to_storage_key(rel_file)
+                        thumb_key = to_storage_key(rel_thumb)
+                        if file_key:
+                            storage.upload_file(final_path, file_key)
+                        if thumb_key and os.path.abspath(thumb_path) != os.path.abspath(final_path):
+                            storage.upload_file(thumb_path, thumb_key)
+                    except Exception as exc:
+                        logger.warning("static_ad_storage_upload_failed: %s", exc)
+
+                file_key = _storage_key_for_path(final_path)
+                thumb_key = _storage_key_for_path(thumb_path)
                 fsize = file_size_mb(final_path)
 
                 qa_score = 80.0
@@ -658,8 +699,8 @@ def process_static_ads(
                 _update_static_ad_record(
                     ad_id,
                     status="completed",
-                    file_path=final_path,
-                    thumbnail_path=thumb_path,
+                    file_path=file_key,
+                    thumbnail_path=thumb_key,
                     file_size_mb=fsize,
                     width=ad_width,
                     height=ad_height,
@@ -668,7 +709,7 @@ def process_static_ads(
                 results.append({
                     "ad_id": ad_id,
                     "status": "completed",
-                    "file_path": final_path,
+                    "file_path": file_key,
                     "quality_score": qa_score,
                 })
 
@@ -875,7 +916,17 @@ def run_campaign(campaign_id: str) -> Dict:
             storage.ensure_bucket()
             camp_dir_path = os.path.join(BASE_OUTPUT, f"campaign_{cid}")
             if os.path.isdir(camp_dir_path):
-                storage.upload_directory(camp_dir_path, f"campaigns/{cid}")
+                if settings.storage_backend == "local":
+                    storage.upload_directory(camp_dir_path, f"campaigns/{cid}")
+                else:
+                    for root, dirs, files in os.walk(camp_dir_path):
+                        if "static_ads" in dirs:
+                            dirs.remove("static_ads")
+                        for fname in files:
+                            local = os.path.join(root, fname)
+                            rel = os.path.relpath(local, camp_dir_path)
+                            key = f"campaigns/{cid}/{rel}"
+                            storage.upload_file(local, key)
                 # NOTE: This module uses stdlib logging; don't pass structured kwargs.
                 logger.info("campaign_uploaded campaign_id=%s", cid)
         except Exception as exc:

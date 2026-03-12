@@ -41,6 +41,8 @@ class SingleStaticAdOut(BaseModel):
     image_url: Optional[str] = None
     file_path: Optional[str] = None
     thumbnail_path: Optional[str] = None
+    file_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     file_size_mb: Optional[float] = None
     width: int
     height: int

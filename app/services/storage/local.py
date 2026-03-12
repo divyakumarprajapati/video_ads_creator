@@ -70,6 +70,9 @@ class LocalStorage:
         """For local storage, just return the static URL."""
         return f"{self.url_prefix}/{key}"
 
+    def public_url(self, key: str) -> str:
+        return f"{self.url_prefix}/{key}"
+
     # ── Delete ─────────────────────────────────────────────
 
     def delete_key(self, key: str) -> None:
