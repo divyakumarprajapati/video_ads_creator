@@ -769,42 +769,11 @@ def run_campaign(campaign_id: str) -> Dict:
         videos = data["videos"]
         brand_identity = data.get("brand_identity") or {}
         strategy = data.get("strategy_plan") or {}
-        platforms = data.get("platforms") or ["instagram_feed"]
-        duration = data.get("duration_preference", 15)
 
         work = tmp_dir(prefix="campaign_assets_")
         asset_proc = AssetProcessor(work)
         bg_primary = brand_identity.get("colors", {}).get("background", "#FFFFFF")
         bg_secondary = brand_identity.get("colors", {}).get("secondary", "#F0F0F0")
-
-        # Group videos by product
-        product_video_map: Dict[str, List[Dict]] = {}
-        brand_video_list: List[Dict] = []
-        for v in videos:
-            v_dict = dict(v)
-            product_plans = strategy.get("product_plans", [])
-            if v.get("video_type") == "product_specific" and v.get("product_id"):
-                pid = str(v["product_id"])
-                if pid not in product_video_map:
-                    product_video_map[pid] = []
-                for pp in product_plans:
-                    for var in pp.get("variants", []):
-                        if var.get("variant_id") == v.get("variant_id"):
-                            v_dict["creative"] = {
-                                "video_style": pp.get("video_style", "product_hero"),
-                                "pacing": var.get("pacing", "medium"),
-                            }
-                product_video_map[pid].append(v_dict)
-            else:
-                brand_plan = strategy.get("brand_plan", {})
-                layouts = brand_plan.get("layout_types", ["sequential_carousel"])
-                v_idx = v.get("variant_id", 1) - 1
-                v_dict["layout_type"] = layouts[v_idx % len(layouts)] if layouts else "sequential_carousel"
-                v_dict["pacing"] = "medium"
-                for bv in brand_plan.get("variants", []):
-                    if bv.get("variant_id") == v.get("variant_id"):
-                        v_dict["pacing"] = bv.get("pacing", "medium")
-                brand_video_list.append(v_dict)
 
         # Pre-download and composite all product images
         product_composites: List[str] = []
@@ -831,29 +800,7 @@ def run_campaign(campaign_id: str) -> Dict:
 
         update_campaign_progress(cid, 15, "generating")
         _update_campaign_record(cid, overall_progress=15)
-
-        # Process each product sequentially (in sync mode) or via Celery group
-        for pid, vid_records in product_video_map.items():
-            prod_data = product_data_map.get(
-                pid,
-                {"product_image_url": "", "product_name": "unknown", "product_index": 0},
-            )
-            try:
-                process_product_videos(
-                    cid, pid, prod_data, vid_records,
-                    brand_identity, platforms, duration,
-                )
-            except Exception as exc:
-                logger.error("Product %s failed: %s", pid, exc)
-
-        if brand_video_list and product_composites:
-            try:
-                process_brand_videos(
-                    cid, product_composites, brand_video_list,
-                    brand_identity, platforms, duration,
-                )
-            except Exception as exc:
-                logger.error("Brand videos failed: %s", exc)
+        logger.info("video_generation_skipped campaign_id=%s videos=%s", cid, len(videos))
 
         # ── Generate static ads ────────────────────────────
         static_ads = data.get("static_ads", [])
@@ -876,9 +823,9 @@ def run_campaign(campaign_id: str) -> Dict:
 
         # ── Finalise ───────────────────────────────────────
         final_data = _get_campaign_data(cid)
-        total = len(final_data["videos"])
-        completed = sum(1 for v in final_data["videos"] if v.get("status") == "completed")
-        failed = sum(1 for v in final_data["videos"] if v.get("status") == "failed")
+        total = 0
+        completed = 0
+        failed = 0
         total_static = len(final_data.get("static_ads") or [])
         completed_static = sum(1 for sa in (final_data.get("static_ads") or []) if sa.get("status") == "completed")
         failed_static = sum(1 for sa in (final_data.get("static_ads") or []) if sa.get("status") == "failed")

@@ -2,7 +2,7 @@
 Campaign domain service.
 
 Orchestrates the lifecycle of a campaign: creation, strategy generation,
-video record insertion, task dispatch, status queries, and result assembly.
+static ad record insertion, task dispatch, status queries, and result assembly.
 """
 
 from __future__ import annotations
@@ -20,15 +20,12 @@ from app.core.config import get_settings
 from app.core.enums import (
     CampaignGoal,
     CampaignStatus,
-    LayoutType,
     MessageAngle,
-    Platform,
     ProductGenerationStatus,
     StaticAdStatus,
     StaticAdType,
     VariantType,
     VideoStatus,
-    VideoType,
 )
 from app.core.logging import get_logger
 from app.models.campaign import (
@@ -36,7 +33,6 @@ from app.models.campaign import (
     CampaignPlatformExport,
     CampaignProduct,
     CampaignStaticAd,
-    CampaignVideo,
 )
 from app.schemas.brand import BrandIdentity, MarketResearch
 from app.schemas.campaign import (
@@ -71,7 +67,7 @@ class CampaignService:
         self, payload: CampaignCreate, user_id: str
     ) -> CampaignOut:
         """
-        Create campaign → run strategy → insert video records → dispatch workers.
+        Create campaign → run strategy → insert static ad records → dispatch workers.
         """
         # 1. Insert campaign row
         # Store webhook config inside brand_identity for worker access
@@ -147,60 +143,13 @@ class CampaignService:
         )
         campaign.strategy_plan = strategy.to_dict()
 
-        # 4. Create video records for product-specific + brand videos (skip if no images)
-        video_models: List[CampaignVideo] = []
-        has_any_product_images = any(pm.product_image_url for pm in product_models)
-        if has_any_product_images:
-            for plan, prod_model in zip(strategy.product_plans, product_models):
-                if not prod_model.product_image_url:
-                    logger.info(
-                        "skipping_product_videos_no_image",
-                        product_id=str(prod_model.id),
-                        product_name=prod_model.product_name,
-                    )
-                    continue
-                for var in plan.variants:
-                    vm = CampaignVideo(
-                        campaign_id=campaign.id,
-                        product_id=prod_model.id,
-                        video_type=VideoType.PRODUCT_SPECIFIC,
-                        variant_id=var.variant_id,
-                        variant_type=VariantType(var.variant_type),
-                        message_angle=MessageAngle(var.message_angle),
-                        primary_message=var.primary_message,
-                        secondary_message=var.secondary_message,
-                        cta_text=var.cta_text,
-                        template_id=uuid.UUID(var.template_id) if var.template_id else None,
-                    )
-                    self.db.add(vm)
-                    video_models.append(vm)
-
-            if strategy.brand_plan:
-                bp = strategy.brand_plan
-                for vi, var in enumerate(bp.variants):
-                    layout = bp.layout_types[vi] if vi < len(bp.layout_types) else "sequential_carousel"
-                    vm = CampaignVideo(
-                        campaign_id=campaign.id,
-                        product_id=None,
-                        video_type=VideoType.GENERAL_BRAND,
-                        variant_id=var.variant_id,
-                        variant_type=VariantType(var.variant_type),
-                        message_angle=MessageAngle(var.message_angle),
-                        primary_message=var.primary_message,
-                        secondary_message=var.secondary_message,
-                        cta_text=var.cta_text,
-                        template_id=uuid.UUID(var.template_id) if var.template_id else None,
-                        layout_type=LayoutType(layout),
-                        products_shown=bp.products_shown,
-                    )
-                    self.db.add(vm)
-                    video_models.append(vm)
-        else:
-            logger.info(
-                "static_ads_only_no_images",
-                campaign_id=str(campaign.id),
-                products=len(product_models),
-            )
+        # 4. Video generation disabled for campaign creation (static ads only).
+        video_models: List[Any] = []
+        logger.info(
+            "video_generation_disabled",
+            campaign_id=str(campaign.id),
+            products=len(product_models),
+        )
 
         # 5b. Create static ad records for product-specific static ads
         static_ad_models: List[CampaignStaticAd] = []
@@ -253,12 +202,8 @@ class CampaignService:
         total_videos = len(video_models)
         total_static_ads = len(static_ad_models)
 
-        # Estimate completion: videos take longer; static-ads-only is faster.
-        if total_videos == 0:
-            estimated_minutes = max(1, total_static_ads / max(1, 3))
-        else:
-            num_products = len(product_models)
-            estimated_minutes = max(3, (num_products * 3 + 3) / max(1, 2))  # assume 2 workers
+        # Estimate completion based on static ads only.
+        estimated_minutes = max(1, total_static_ads / max(1, 3))
         campaign.estimated_completion = datetime.now(timezone.utc) + timedelta(minutes=estimated_minutes)
 
         # 7. Dispatch worker (Celery or background thread)
